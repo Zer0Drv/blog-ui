@@ -242,6 +242,15 @@ function goLogin() {
   router.push('/login')
 }
 
+// createComment 返回完整 R 体：message 非 success 时（如命中敏感词进入审核）按后端提示 warning
+function notifyCommentResult(res, successText) {
+  if (res?.message && res.message !== 'success') {
+    ElMessage.warning(res.message)
+  } else {
+    ElMessage.success(successText)
+  }
+}
+
 async function load() {
   loading.value = true
   try {
@@ -300,8 +309,8 @@ async function submitRoot() {
   }
   submitting.value = true
   try {
-    await createComment({ articleId: Number(props.articleId), content: newContent.value.trim() })
-    ElMessage.success('评论成功')
+    const res = await createComment({ articleId: Number(props.articleId), content: newContent.value.trim() })
+    notifyCommentResult(res, '评论成功')
     newContent.value = ''
     emit('change', 1)
     page.value = 1

@@ -14,7 +14,8 @@ http.interceptors.response.use(
   resp => {
     const body = resp.data
     if (body && typeof body === 'object' && 'code' in body) {
-      if (body.code === '200') return body.data
+      // rawResponse：调用方需要完整 R 体（如读取 message 做敏感词审核提示）时跳过 data 剥离
+      if (body.code === '200') return resp.config?.rawResponse ? body : body.data
       ElMessage.error(body.message || '请求失败')
       return Promise.reject(new Error(body.message || '请求失败'))
     }

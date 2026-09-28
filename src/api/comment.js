@@ -12,8 +12,9 @@ export function listReplies(rootId, page = 1, size = 10) {
 }
 
 // 发表评论/回复：{articleId, content, parentId?, replyToUserId?}
+// rawResponse：命中敏感词时后端仍返回 code=200 但 message 提示「已进入审核」，需要完整 R 体
 export function createComment(data) {
-  return http.post('/comments', data)
+  return http.post('/comments', data, { rawResponse: true })
 }
 
 // 删除评论（本人或 ADMIN）

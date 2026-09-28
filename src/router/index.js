@@ -21,6 +21,19 @@ const routes = [
       { path: 'editor/:id', name: 'editor-edit', component: () => import('../views/ArticleEditView.vue'), meta: { roles: ['ADMIN', 'AUTHOR'] } }
     ]
   },
+  {
+    // M5 管理后台：独立布局，全部仅 ADMIN 可访问
+    path: '/admin',
+    component: () => import('../layouts/AdminLayout.vue'),
+    meta: { roles: ['ADMIN'] },
+    children: [
+      { path: '', name: 'admin-dashboard', component: () => import('../views/admin/AdminDashboard.vue'), meta: { roles: ['ADMIN'] } },
+      { path: 'articles', name: 'admin-articles', component: () => import('../views/admin/AdminArticles.vue'), meta: { roles: ['ADMIN'] } },
+      { path: 'comments', name: 'admin-comments', component: () => import('../views/admin/AdminComments.vue'), meta: { roles: ['ADMIN'] } },
+      { path: 'sensitive-words', name: 'admin-sensitive-words', component: () => import('../views/admin/AdminSensitiveWords.vue'), meta: { roles: ['ADMIN'] } },
+      { path: 'users', name: 'admin-users', component: () => import('../views/admin/AdminUsers.vue'), meta: { roles: ['ADMIN'] } }
+    ]
+  },
   { path: '/:pathMatch(.*)*', redirect: '/' }
 ]
 

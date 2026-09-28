@@ -27,7 +27,10 @@
           <div class="card-body">
             <img v-if="a.cover" :src="resolveUploadUrl(a.cover)" class="cover" alt="cover" />
             <div class="info">
-              <h3 class="title">{{ a.title }}</h3>
+              <h3 class="title">
+                <el-tag v-if="Number(a.isTop) === 1" type="danger" size="small" class="top-tag">置顶</el-tag>
+                {{ a.title }}
+              </h3>
               <p class="summary">{{ a.summary }}</p>
               <div class="meta">
                 <span>{{ a.author?.nickname || a.author?.username }}</span>
@@ -211,6 +214,10 @@ onMounted(() => {
   margin: 0 0 8px;
   font-size: 18px;
   color: #303133;
+}
+.top-tag {
+  margin-right: 6px;
+  vertical-align: 2px;
 }
 .summary {
   margin: 0 0 10px;
