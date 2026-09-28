@@ -5,12 +5,22 @@
         <router-link to="/" class="brand">Blog</router-link>
         <nav class="nav">
           <router-link to="/" class="nav-link">首页</router-link>
+          <router-link v-if="auth.isLoggedIn" to="/feed" class="nav-link">动态</router-link>
         </nav>
         <div class="spacer" />
         <template v-if="auth.isLoggedIn">
           <el-button v-if="canWrite" type="primary" @click="router.push('/editor/new')">
             写文章
           </el-button>
+          <!-- M4 通知铃铛：未读数 30s 轮询，页面隐藏暂停 -->
+          <el-badge
+            :value="unreadCount"
+            :hidden="!unreadCount"
+            :max="99"
+            class="notify-badge"
+          >
+            <el-icon class="bell" @click="router.push('/notifications')"><Bell /></el-icon>
+          </el-badge>
           <el-dropdown trigger="click" @command="onCommand">
             <span class="user-entry">
               {{ auth.user?.nickname || auth.user?.username || '用户' }}
@@ -20,6 +30,8 @@
               <el-dropdown-menu>
                 <el-dropdown-item command="mine">我的文章</el-dropdown-item>
                 <el-dropdown-item command="favorites">我的收藏</el-dropdown-item>
+                <el-dropdown-item command="messages">私信</el-dropdown-item>
+                <el-dropdown-item command="feed">关注动态</el-dropdown-item>
                 <el-dropdown-item command="logout" divided>登出</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -35,10 +47,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowDown } from '@element-plus/icons-vue'
+import { ArrowDown, Bell } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
+import { getUnreadCount } from '../api/notification'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -49,9 +62,60 @@ onMounted(() => {
   if (auth.isLoggedIn && !auth.user) auth.fetchMe().catch(() => {})
 })
 
+// M4 通知未读数轮询（30s；document.hidden 时暂停）
+const unreadCount = ref(0)
+let timer = null
+
+async function refreshUnread() {
+  if (!auth.isLoggedIn || document.visibilityState !== 'visible') return
+  try {
+    const data = await getUnreadCount()
+    unreadCount.value = Number(data?.count) || 0
+  } catch { /* 静默失败，下次轮询重试 */ }
+}
+
+function startPolling() {
+  stopPolling()
+  refreshUnread()
+  timer = setInterval(refreshUnread, 30000)
+}
+
+function stopPolling() {
+  if (timer) {
+    clearInterval(timer)
+    timer = null
+  }
+  unreadCount.value = 0
+}
+
+function onVisibilityChange() {
+  if (document.visibilityState === 'visible') refreshUnread()
+}
+
+watch(() => auth.isLoggedIn, loggedIn => {
+  if (loggedIn) startPolling()
+  else stopPolling()
+})
+
+onMounted(() => {
+  if (auth.isLoggedIn) startPolling()
+  document.addEventListener('visibilitychange', onVisibilityChange)
+})
+
+onUnmounted(() => {
+  stopPolling()
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+})
+
 async function onCommand(cmd) {
   if (cmd === 'mine') {
     router.push('/my/articles')
+  } else if (cmd === 'favorites') {
+    router.push('/my/favorites')
+  } else if (cmd === 'messages') {
+    router.push('/messages')
+  } else if (cmd === 'feed') {
+    router.push('/feed')
   } else if (cmd === 'logout') {
     await auth.logout()
     router.push('/')
@@ -86,6 +150,10 @@ async function onCommand(cmd) {
   color: #303133;
   text-decoration: none;
 }
+.nav {
+  display: flex;
+  gap: 16px;
+}
 .nav-link {
   color: #606266;
   text-decoration: none;
@@ -96,6 +164,18 @@ async function onCommand(cmd) {
 }
 .spacer {
   flex: 1;
+}
+.notify-badge {
+  margin-left: 4px;
+}
+.bell {
+  font-size: 20px;
+  color: #606266;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.bell:hover {
+  color: #409eff;
 }
 .user-entry {
   display: flex;

@@ -232,6 +232,12 @@ onMounted(() => {
 .tag {
   cursor: pointer;
 }
+.author {
+  cursor: pointer;
+}
+.author:hover {
+  color: #409eff;
+}
 .pager {
   display: flex;
   justify-content: center;

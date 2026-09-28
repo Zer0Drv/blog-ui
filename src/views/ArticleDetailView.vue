@@ -5,7 +5,20 @@
       <el-card>
         <h1 class="title">{{ article.title }}</h1>
         <div class="meta">
-          <span class="author">{{ article.author?.nickname || article.author?.username }}</span>
+          <span
+            class="author clickable"
+            @click="article.author?.id && router.push(`/users/${article.author.id}`)"
+          >{{ article.author?.nickname || article.author?.username }}</span>
+          <!-- M4 关注按钮：登录且非本人显示 -->
+          <el-button
+            v-if="showFollow"
+            size="small"
+            :type="authorFollowed ? 'default' : 'primary'"
+            :plain="!!authorFollowed"
+            round
+            :loading="followLoading"
+            @click="toggleFollowAuthor"
+          >{{ authorFollowed ? '已关注' : '+ 关注' }}</el-button>
           <span>发布于 {{ formatTime(article.publishTime || article.createTime) }}</span>
           <el-tag v-if="article.categoryName" size="small" type="info">{{ article.categoryName }}</el-tag>
           <el-tag
@@ -170,6 +183,7 @@ onMounted(async () => {
   }
   try {
     article.value = await getArticle(route.params.id)
+    loadAuthorFollowState()
   } catch { /* 拦截器已提示 */ } finally {
     loading.value = false
   }
