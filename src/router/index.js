@@ -11,6 +11,7 @@ const routes = [
       { path: '', name: 'home', component: () => import('../views/HomeView.vue'), meta: { public: true } },
       { path: 'article/:id', name: 'article-detail', component: () => import('../views/ArticleDetailView.vue'), meta: { public: true } },
       { path: 'my/articles', name: 'my-articles', component: () => import('../views/MyArticlesView.vue') },
+      { path: 'my/favorites', name: 'my-favorites', component: () => import('../views/MyFavoritesView.vue') },
       { path: 'editor/new', name: 'editor-new', component: () => import('../views/ArticleEditView.vue'), meta: { roles: ['ADMIN', 'AUTHOR'] } },
       { path: 'editor/:id', name: 'editor-edit', component: () => import('../views/ArticleEditView.vue'), meta: { roles: ['ADMIN', 'AUTHOR'] } }
     ]

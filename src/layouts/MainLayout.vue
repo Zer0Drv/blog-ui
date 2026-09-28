@@ -19,6 +19,7 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="mine">我的文章</el-dropdown-item>
+                <el-dropdown-item command="favorites">我的收藏</el-dropdown-item>
                 <el-dropdown-item command="logout" divided>登出</el-dropdown-item>
               </el-dropdown-menu>
             </template>
