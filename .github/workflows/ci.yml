@@ -24,9 +24,10 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      # TODO: pnpm-lock.yaml 与 package.json 同步后，改回 --frozen-lockfile
+      # lockfile 已与 package.json 同步（本地 pnpm install --frozen-lockfile 通过），
+      # 保持严格模式：package.json 改了却没更新 lockfile 时直接失败，而不是静默装出另一套依赖树
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm run build
