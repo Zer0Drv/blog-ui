@@ -88,6 +88,7 @@ function actionText(type) {
     COMMENT_REPLY: '回复了你的评论',
     MENTION: '在评论中提到了你',
     ARTICLE_LIKE: '点赞了你的文章',
+    COMMENT_LIKE: '点赞了你的评论',
     FOLLOW: '关注了你',
     PRIVATE_MESSAGE: '给你发来私信',
     SYSTEM: '系统通知'
