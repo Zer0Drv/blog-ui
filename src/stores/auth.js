@@ -25,6 +25,11 @@ export const useAuthStore = defineStore('auth', {
     async sendEmailCode(email) {
       await http.post('/auth/email-code', { email })
     },
+    // OAuth 回调直接写入已签发的 token（GitHub 登录回跳 /oauth/callback?token=...）
+    setToken(token) {
+      this.token = token
+      localStorage.setItem('token', token)
+    },
     async fetchMe() {
       this.user = await http.get('/auth/me')
     },

@@ -46,12 +46,13 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { reactive, ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const tab = ref('login')
 const loading = ref(false)
@@ -59,6 +60,19 @@ const countdown = ref(0)
 
 const loginForm = reactive({ username: '', password: '' })
 const regForm = reactive({ username: '', password: '', nickname: '', email: '', code: '' })
+
+// OAuth 失败回跳提示（failure-redirect 带 error=oauth_failed）
+onMounted(() => {
+  if (route.query.error === 'oauth_failed') {
+    ElMessage.error('GitHub 登录失败，请重试')
+  }
+})
+
+// GitHub OAuth：直连后端授权端点（不走 vite 代理，避免 redirect_uri 被算成前端域名）
+function onGithubLogin() {
+  const origin = import.meta.env.VITE_API_ORIGIN || 'http://localhost:8082'
+  window.location.href = `${origin}/oauth2/authorization/github`
+}
 
 async function onLogin() {
   loading.value = true
@@ -121,5 +135,22 @@ async function onRegister() {
   display: flex;
   gap: 8px;
   width: 100%;
+}
+.github-btn {
+  background: #24292f;
+  border-color: #24292f;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.github-btn:hover {
+  background: #32383f;
+  border-color: #32383f;
+  color: #fff;
+}
+.github-icon {
+  flex-shrink: 0;
 }
 </style>

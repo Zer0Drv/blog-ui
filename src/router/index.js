@@ -4,6 +4,8 @@ import { useAuthStore } from '../stores/auth'
 
 const routes = [
   { path: '/login', name: 'login', component: () => import('../views/LoginView.vue'), meta: { public: true } },
+  // GitHub OAuth 回跳（后端 302 带 token）
+  { path: '/oauth/callback', name: 'oauth-callback', component: () => import('../views/OAuthCallbackView.vue'), meta: { public: true } },
   {
     path: '/',
     component: () => import('../layouts/MainLayout.vue'),
