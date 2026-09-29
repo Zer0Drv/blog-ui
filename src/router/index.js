@@ -12,7 +12,7 @@ const routes = [
     children: [
       { path: '', name: 'home', component: () => import('../views/HomeView.vue'), meta: { public: true } },
       { path: 'article/:id', name: 'article-detail', component: () => import('../views/ArticleDetailView.vue'), meta: { public: true } },
-      { path: 'my/articles', name: 'my-articles', component: () => import('../views/MyArticlesView.vue') },
+      { path: 'my/articles', name: 'my-articles', component: () => import('../views/MyArticlesView.vue'), meta: { roles: ['ADMIN', 'AUTHOR'] } },
       { path: 'my/favorites', name: 'my-favorites', component: () => import('../views/MyFavoritesView.vue') },
       // M4 社交：通知/用户主页/关注动态/私信（/users/:id 公开，其余需登录）
       { path: 'notifications', name: 'notifications', component: () => import('../views/NotificationsView.vue') },
@@ -33,6 +33,7 @@ const routes = [
       { path: 'articles', name: 'admin-articles', component: () => import('../views/admin/AdminArticles.vue'), meta: { roles: ['ADMIN'] } },
       { path: 'comments', name: 'admin-comments', component: () => import('../views/admin/AdminComments.vue'), meta: { roles: ['ADMIN'] } },
       { path: 'sensitive-words', name: 'admin-sensitive-words', component: () => import('../views/admin/AdminSensitiveWords.vue'), meta: { roles: ['ADMIN'] } },
+      { path: 'taxonomy', name: 'admin-taxonomy', component: () => import('../views/admin/AdminTaxonomy.vue'), meta: { roles: ['ADMIN'] } },
       { path: 'users', name: 'admin-users', component: () => import('../views/admin/AdminUsers.vue'), meta: { roles: ['ADMIN'] } }
     ]
   },

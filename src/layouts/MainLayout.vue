@@ -29,7 +29,7 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item v-if="auth.user?.role === 'ADMIN'" command="admin">管理后台</el-dropdown-item>
-                <el-dropdown-item command="mine">我的文章</el-dropdown-item>
+                <el-dropdown-item v-if="canWrite" command="mine">我的文章</el-dropdown-item>
                 <el-dropdown-item command="favorites">我的收藏</el-dropdown-item>
                 <el-dropdown-item command="messages">私信</el-dropdown-item>
                 <el-dropdown-item command="feed">关注动态</el-dropdown-item>

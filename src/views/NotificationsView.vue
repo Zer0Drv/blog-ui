@@ -125,6 +125,9 @@ async function onClick(n) {
   }
   if (n.type === 'PRIVATE_MESSAGE') {
     router.push('/messages')
+  } else if (n.type === 'FOLLOW' && n.actor?.id) {
+    // 关注通知跳关注者主页
+    router.push(`/users/${n.actor.id}`)
   } else if (n.articleId) {
     router.push(`/article/${n.articleId}`)
   }

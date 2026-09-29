@@ -272,6 +272,12 @@ onMounted(async () => {
   pageLoading.value = true
   try {
     const a = await getArticle(articleId.value)
+    // 编辑他人文章提前拦截（后端保存时也会拒绝，这里避免加载出完整内容）
+    if (auth.user?.role !== 'ADMIN' && String(a.author?.id) !== String(auth.user?.id)) {
+      ElMessage.warning('只能编辑自己的文章')
+      router.replace({ name: 'my-articles' })
+      return
+    }
     form.title = a.title || ''
     form.summary = a.summary || ''
     form.cover = a.cover || ''

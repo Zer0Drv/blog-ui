@@ -310,11 +310,13 @@ async function submitRoot() {
   submitting.value = true
   try {
     const res = await createComment({ articleId: Number(props.articleId), content: newContent.value.trim() })
-    notifyCommentResult(res, '评论成功')
+    const visible = notifyCommentResult(res, '评论成功')
     newContent.value = ''
-    emit('change', 1)
-    page.value = 1
-    await load()
+    if (visible) {
+      emit('change', 1)
+      page.value = 1
+      await load()
+    }
   } catch { /* 拦截器已提示 */ } finally {
     submitting.value = false
   }
