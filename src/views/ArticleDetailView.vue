@@ -177,6 +177,38 @@ function onCommentChange(delta) {
   article.value.commentCount = Math.max(0, (article.value.commentCount || 0) + delta)
 }
 
+// M4 关注作者：登录且非本人才显示按钮
+const authorFollowed = ref(false)
+const followLoading = ref(false)
+const showFollow = computed(() =>
+  auth.isLoggedIn && article.value?.author?.id && auth.user?.id !== article.value.author.id)
+
+async function loadAuthorFollowState() {
+  if (!showFollow.value) return
+  try {
+    const profile = await getUserProfile(article.value.author.id)
+    authorFollowed.value = !!Number(profile?.followed)
+  } catch { /* 非关键路径，失败仅不显示关注态 */ }
+}
+
+async function toggleFollowAuthor() {
+  if (!requireLogin()) return
+  followLoading.value = true
+  try {
+    if (authorFollowed.value) {
+      await unfollow(article.value.author.id)
+      authorFollowed.value = false
+      ElMessage.success('已取消关注')
+    } else {
+      await follow(article.value.author.id)
+      authorFollowed.value = true
+      ElMessage.success('关注成功')
+    }
+  } catch { /* 拦截器已提示 */ } finally {
+    followLoading.value = false
+  }
+}
+
 onMounted(async () => {
   if (auth.isLoggedIn && !auth.user) {
     try { await auth.fetchMe() } catch { /* 忽略 */ }
