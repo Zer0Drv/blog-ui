@@ -87,14 +87,16 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { listConversations, pageMessages, sendMessage, markConversationRead } from '../api/message'
 import { getUserProfile } from '../api/social'
 import { resolveUploadUrl } from '../api/upload'
 import { useAuthStore } from '../stores/auth'
+import { useRealtimeStore } from '../stores/realtime'
 
 const auth = useAuthStore()
+const realtime = useRealtimeStore()
 const route = useRoute()
 
 const conversations = ref([])
@@ -205,6 +207,7 @@ async function openPeerFromQuery() {
 }
 
 onMounted(async () => {
+  realtime.on('private_message', onRealtimeMessage)
   if (!auth.user) {
     try { await auth.fetchMe() } catch { /* 忽略 */ }
   }
@@ -214,11 +217,13 @@ onMounted(async () => {
   } else if (conversations.value.length) {
     selectConversation(conversations.value[0].peer)
   }
-  pollTimer = setInterval(poll, 5000)
+  // WS 未连接才起 5s 轮询兜底；连上后由 watch 停掉
+  if (!realtime.connected) startPolling()
 })
 
 onUnmounted(() => {
-  if (pollTimer) clearInterval(pollTimer)
+  realtime.off('private_message', onRealtimeMessage)
+  stopPolling()
 })
 </script>
 

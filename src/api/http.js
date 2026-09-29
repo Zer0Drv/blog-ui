@@ -17,7 +17,10 @@ http.interceptors.response.use(
       // rawResponse：调用方需要完整 R 体（如读取 message 做敏感词审核提示）时跳过 data 剥离
       if (body.code === '200') return resp.config?.rawResponse ? body : body.data
       ElMessage.error(body.message || '请求失败')
-      return Promise.reject(new Error(body.message || '请求失败'))
+      // 业务错误：后端 code 挂到 Error 上（如 CAPTCHA_REQUIRED 供页面判断）
+      const e = new Error(body.message || '请求失败')
+      e.code = body.code
+      return Promise.reject(e)
     }
     return body
   },
@@ -27,6 +30,8 @@ http.interceptors.response.use(
       if (location.pathname !== '/login') location.href = '/login'
     }
     ElMessage.error(err.response?.data?.message || err.message || '网络错误')
+    // HTTP 层错误：同样透传后端 code（限流/参数错误等也走 HTTP 状态码时可用）
+    err.code = err.response?.data?.code
     return Promise.reject(err)
   }
 )

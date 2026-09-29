@@ -14,6 +14,7 @@ const routes = [
       { path: 'article/:id', name: 'article-detail', component: () => import('../views/ArticleDetailView.vue'), meta: { public: true } },
       { path: 'my/articles', name: 'my-articles', component: () => import('../views/MyArticlesView.vue'), meta: { roles: ['ADMIN', 'AUTHOR'] } },
       { path: 'my/favorites', name: 'my-favorites', component: () => import('../views/MyFavoritesView.vue') },
+      { path: 'settings', name: 'settings', component: () => import('../views/SettingsView.vue') },
       // M4 社交：通知/用户主页/关注动态/私信（/users/:id 公开，其余需登录）
       { path: 'notifications', name: 'notifications', component: () => import('../views/NotificationsView.vue') },
       { path: 'users/:id', name: 'user-profile', component: () => import('../views/UserProfileView.vue'), meta: { public: true } },

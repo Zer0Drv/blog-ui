@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import http from '../api/http'
+import { useRealtimeStore } from './realtime'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -40,8 +41,11 @@ export const useAuthStore = defineStore('auth', {
     },
     async fetchMe() {
       this.user = await http.get('/auth/me')
+      // 已登录态恢复（刷新页面/OAuth 回跳等）成功后建立 WS（幂等）
+      useRealtimeStore().connect()
     },
     async logout() {
+      useRealtimeStore().disconnect()
       try { await http.post('/auth/logout') } catch { /* token 已失效也允许本地登出 */ }
       this.token = ''
       this.user = null

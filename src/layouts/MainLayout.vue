@@ -117,6 +117,8 @@ async function onCommand(cmd) {
     router.push('/my/favorites')
   } else if (cmd === 'messages') {
     router.push('/messages')
+  } else if (cmd === 'settings') {
+    router.push('/settings')
   } else if (cmd === 'feed') {
     router.push('/feed')
   } else if (cmd === 'logout') {

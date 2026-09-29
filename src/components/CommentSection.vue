@@ -21,6 +21,9 @@
         show-word-limit
         placeholder="写下你的评论..."
       />
+      <div v-if="commentCaptcha.visible" class="captcha-row">
+        <CaptchaInput ref="commentCaptchaRef" v-model="commentCaptcha.value" scene="comment" />
+      </div>
       <div class="editor-actions">
         <el-button type="primary" :loading="submitting" :disabled="!newContent.trim()" @click="submitRoot">
           发表评论
@@ -221,6 +224,10 @@ const replyTarget = ref(null) // {rootId, reply|null, placeholder}
 const replySize = 10
 // 已展开的主评论：rootId -> {list, page, total}
 const expanded = reactive({})
+
+// 评论限流（CAPTCHA_REQUIRED）后才显示的图形验证码
+const commentCaptcha = reactive({ visible: false, value: { captchaId: '', captchaCode: '' } })
+const commentCaptchaRef = ref()
 
 function avatarUrl(user) {
   return user?.avatar ? resolveUploadUrl(user.avatar) : ''
@@ -425,6 +432,10 @@ onMounted(async () => {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 8px;
+}
+.captcha-row {
+  margin-top: 8px;
+  max-width: 320px;
 }
 .login-tip {
   color: #909399;

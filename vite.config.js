@@ -16,6 +16,11 @@ export default defineConfig({
         target: process.env.API_TARGET || 'http://localhost:8082',
         changeOrigin: true,
         rewrite: p => p.replace(/^\/api/, '')
+      },
+      // WebSocket（私信/通知实时推送）：同源 /ws 直转后端，不重写路径
+      '/ws': {
+        target: process.env.API_TARGET || 'http://localhost:8082',
+        ws: true
       }
     }
   },

@@ -12,6 +12,9 @@
               <el-input v-model="loginForm.password" type="password" show-password
                         autocomplete="current-password" @keyup.enter="onLogin" />
             </el-form-item>
+            <el-form-item v-if="loginCaptcha.visible" label="图形验证码">
+              <CaptchaInput ref="loginCaptchaRef" v-model="loginCaptcha.value" scene="login" />
+            </el-form-item>
             <div class="forgot-row">
               <el-button link type="primary" size="small" class="forgot-link" @click="goReset">忘记密码？</el-button>
             </div>
@@ -95,6 +98,34 @@ const countdown = ref(0)
 const loginForm = reactive({ username: '', password: '' })
 const regForm = reactive({ username: '', password: '', nickname: '', email: '', code: '' })
 
+// 自适应验证码：三个场景（登录/注册/邮箱验证码）状态互相独立，触发 CAPTCHA_REQUIRED 后才显示
+const loginCaptcha = reactive({ visible: false, value: { captchaId: '', captchaCode: '' } })
+const regCaptcha = reactive({ visible: false, value: { captchaId: '', captchaCode: '' } })
+const emailCaptcha = reactive({ visible: false, value: { captchaId: '', captchaCode: '' } })
+const loginCaptchaRef = ref()
+const regCaptchaRef = ref()
+const emailCaptchaRef = ref()
+
+// 验证码可见时把 captchaId/captchaCode 并入请求体
+function captchaPayload(c) {
+  return c.visible ? { captchaId: c.value.captchaId, captchaCode: c.value.captchaCode } : {}
+}
+
+function isCaptchaRequired(err) {
+  return err?.code === CAPTCHA_REQUIRED_CODE
+}
+
+// 显示验证码；已显示（再次触发）时换新图——验证码一次性，失败即作废
+function showCaptcha(c, captchaRef) {
+  if (c.visible) captchaRef.value?.refresh()
+  c.visible = true
+}
+
+function clearCaptcha(c) {
+  c.visible = false
+  c.value = { captchaId: '', captchaCode: '' }
+}
+
 // 密码找回
 const resetFormRef = ref()
 const resetCountdown = ref(0)
@@ -137,10 +168,20 @@ function onGithubLogin() {
 async function onLogin() {
   loading.value = true
   try {
-    await auth.login(loginForm.username, loginForm.password)
+    // store 未提供带 captcha 的登录：直调 http，成功后按 auth.login 的既有逻辑落 token/user
+    const data = await http.post('/auth/login', {
+      username: loginForm.username,
+      password: loginForm.password,
+      ...captchaPayload(loginCaptcha)
+    })
+    auth.setToken(data.access_token)
+    await auth.fetchMe()
+    clearCaptcha(loginCaptcha)
     ElMessage.success('登录成功')
     router.push({ name: 'home' })
-  } catch { /* 拦截器已提示 */ } finally {
+  } catch (err) {
+    if (isCaptchaRequired(err)) showCaptcha(loginCaptcha, loginCaptchaRef)
+  } finally {
     loading.value = false
   }
 }

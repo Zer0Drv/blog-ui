@@ -144,7 +144,25 @@ async function onMarkAllRead() {
   }
 }
 
-onMounted(load)
+// WS 推送的新通知：命中当前 tab（全部/对应类型）且在第 1 页时插入列表顶部；
+// 总数即时 +1（未读项带红点样式）；其余情况等下次 load/切页自然带出
+function onRealtimeNotification(n) {
+  if (!n) return
+  total.value += 1
+  if (page.value === 1 && (!activeType.value || n.type === activeType.value)) {
+    items.value.unshift(n)
+    if (items.value.length > size) items.value.pop()
+  }
+}
+
+onMounted(() => {
+  realtime.on('notification', onRealtimeNotification)
+  load()
+})
+
+onUnmounted(() => {
+  realtime.off('notification', onRealtimeNotification)
+})
 </script>
 
 <style scoped>
