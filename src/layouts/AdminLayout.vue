@@ -26,6 +26,10 @@
           <el-icon><Lock /></el-icon>
           <span>敏感词库</span>
         </el-menu-item>
+        <el-menu-item index="/admin/taxonomy">
+          <el-icon><Collection /></el-icon>
+          <span>标签分类</span>
+        </el-menu-item>
         <el-menu-item index="/admin/users">
           <el-icon><User /></el-icon>
           <span>用户管理</span>
@@ -49,7 +53,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChatDotSquare, Document, Lock, Odometer, User } from '@element-plus/icons-vue'
+import { ChatDotSquare, Collection, Document, Lock, Odometer, User } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
