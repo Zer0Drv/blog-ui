@@ -25,6 +25,14 @@ export const useAuthStore = defineStore('auth', {
     async sendEmailCode(email) {
       await http.post('/auth/email-code', { email })
     },
+    // 密码找回：发码（SCENE_RESET）；邮箱未注册后端返回 EMAIL_NOT_REGISTERED
+    async sendResetCode(email) {
+      await http.post('/auth/password-reset-code', { email })
+    },
+    // 密码找回：验码成功后 BCrypt 更新密码；历史 token 不作废（后端 JWT 取舍）
+    async resetPassword(form) {
+      await http.post('/auth/password-reset', form)
+    },
     // OAuth 回调直接写入已签发的 token（GitHub 登录回跳 /oauth/callback?token=...）
     setToken(token) {
       this.token = token

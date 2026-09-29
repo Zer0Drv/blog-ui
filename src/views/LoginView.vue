@@ -12,6 +12,9 @@
               <el-input v-model="loginForm.password" type="password" show-password
                         autocomplete="current-password" @keyup.enter="onLogin" />
             </el-form-item>
+            <div class="forgot-row">
+              <el-button link type="primary" size="small" class="forgot-link" @click="goReset">忘记密码？</el-button>
+            </div>
             <el-button type="primary" class="full" :loading="loading" @click="onLogin">登录</el-button>
           </el-form>
           <el-divider>其他登录方式</el-divider>
@@ -47,6 +50,30 @@
             <el-button type="primary" class="full" :loading="loading" @click="onRegister">注册并登录</el-button>
           </el-form>
         </el-tab-pane>
+        <el-tab-pane label="重置密码" name="reset">
+          <el-form ref="resetFormRef" :model="resetForm" :rules="resetRules" label-position="top" @submit.prevent>
+            <el-form-item label="邮箱" prop="email">
+              <div class="code-row">
+                <el-input v-model="resetForm.email" placeholder="注册时使用的邮箱" autocomplete="email" />
+                <el-button :disabled="resetCountdown > 0" @click="onSendResetCode">
+                  {{ resetCountdown > 0 ? `${resetCountdown}s` : '发送验证码' }}
+                </el-button>
+              </div>
+            </el-form-item>
+            <el-form-item label="验证码" prop="code">
+              <el-input v-model="resetForm.code" placeholder="6 位数字" maxlength="6" />
+            </el-form-item>
+            <el-form-item label="新密码" prop="newPassword">
+              <el-input v-model="resetForm.newPassword" type="password" show-password
+                        placeholder="6~32 位" autocomplete="new-password" />
+            </el-form-item>
+            <el-form-item label="确认密码" prop="confirmPassword">
+              <el-input v-model="resetForm.confirmPassword" type="password" show-password
+                        placeholder="再次输入新密码" autocomplete="new-password" />
+            </el-form-item>
+            <el-button type="primary" class="full" :loading="loading" @click="onResetPassword">重置密码</el-button>
+          </el-form>
+        </el-tab-pane>
       </el-tabs>
     </el-card>
   </div>
@@ -67,6 +94,32 @@ const countdown = ref(0)
 
 const loginForm = reactive({ username: '', password: '' })
 const regForm = reactive({ username: '', password: '', nickname: '', email: '', code: '' })
+
+// 密码找回
+const resetFormRef = ref()
+const resetCountdown = ref(0)
+const resetForm = reactive({ email: '', code: '', newPassword: '', confirmPassword: '' })
+const resetRules = {
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '邮箱格式不正确', trigger: 'blur' }
+  ],
+  code: [{ required: true, message: '请输入验证码', trigger: 'blur' }],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, max: 32, message: '密码长度 6~32 位', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    {
+      validator: (rule, value, cb) => {
+        if (value !== resetForm.newPassword) cb(new Error('两次输入的密码不一致'))
+        else cb()
+      },
+      trigger: 'blur'
+    }
+  ]
+}
 
 // OAuth 失败回跳提示（failure-redirect 带 error=oauth_failed）
 onMounted(() => {
@@ -118,6 +171,52 @@ async function onRegister() {
     loading.value = false
   }
 }
+
+// 「忘记密码？」切到重置 tab 并预填注册邮箱（如有）
+function goReset() {
+  resetForm.email = resetForm.email || regForm.email
+  tab.value = 'reset'
+}
+
+async function onSendResetCode() {
+  if (!resetForm.email) {
+    ElMessage.warning('请先填写邮箱')
+    return
+  }
+  try {
+    await auth.sendResetCode(resetForm.email)
+    ElMessage.success('验证码已发送（dev 模式见后端日志）')
+    resetCountdown.value = 60
+    const timer = setInterval(() => {
+      resetCountdown.value -= 1
+      if (resetCountdown.value <= 0) clearInterval(timer)
+    }, 1000)
+  } catch { /* 拦截器已提示（含邮箱未注册 EMAIL_NOT_REGISTERED） */ }
+}
+
+async function onResetPassword() {
+  try {
+    await resetFormRef.value.validate()
+  } catch {
+    return // 前端校验未通过（rules 已提示）
+  }
+  loading.value = true
+  try {
+    await auth.resetPassword({
+      email: resetForm.email,
+      code: resetForm.code,
+      newPassword: resetForm.newPassword
+    })
+    ElMessage.success('密码已重置，请使用新密码登录')
+    loginForm.username = resetForm.email
+    resetForm.code = ''
+    resetForm.newPassword = ''
+    resetForm.confirmPassword = ''
+    tab.value = 'login'
+  } catch { /* 拦截器已提示 */ } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -137,6 +236,11 @@ async function onRegister() {
 }
 .full {
   width: 100%;
+}
+.forgot-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: -8px 0 12px;
 }
 .code-row {
   display: flex;
