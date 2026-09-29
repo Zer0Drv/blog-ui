@@ -95,6 +95,7 @@ import { resolveUploadUrl } from '../api/upload'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
+const route = useRoute()
 
 const conversations = ref([])
 const msgPage = ref(1)
