@@ -9,22 +9,51 @@
           <h2 class="nickname">{{ profile.nickname || profile.username }}</h2>
           <p class="bio">{{ profile.bio || '这个人很懒，什么都没留下' }}</p>
           <div class="stats">
-            <span>粉丝 {{ profile.followerCount || 0 }}</span>
-            <span>关注 {{ profile.followingCount || 0 }}</span>
+            <span class="clickable" @click="openFollowList('followers')">粉丝 {{ profile.followerCount || 0 }}</span>
+            <span class="clickable" @click="openFollowList('following')">关注 {{ profile.followingCount || 0 }}</span>
             <span>文章 {{ profile.articleCount || 0 }}</span>
           </div>
         </div>
-        <!-- 本人主页不显示关注按钮 -->
-        <el-button
-          v-if="!isSelf"
-          :type="profile.followed ? 'default' : 'primary'"
-          :plain="!!profile.followed"
-          :loading="following"
-          @click="toggleFollow"
-        >{{ profile.followed ? '已关注' : '+ 关注' }}</el-button>
+        <div v-if="!isSelf" class="actions">
+          <el-button
+            :type="profile.followed ? 'default' : 'primary'"
+            :plain="!!profile.followed"
+            :loading="following"
+            @click="toggleFollow"
+          >{{ profile.followed ? '已关注' : '+ 关注' }}</el-button>
+          <el-button @click="onSendMessage">发私信</el-button>
+        </div>
       </div>
     </el-card>
     <el-skeleton v-else-if="profileLoading" :rows="3" animated />
+
+    <!-- 粉丝/关注列表弹窗 -->
+    <el-dialog v-model="followDialog.visible" :title="followDialog.type === 'followers' ? '粉丝' : '关注'" width="420px">
+      <el-skeleton v-if="followDialog.loading" :rows="4" animated />
+      <template v-else>
+        <el-empty v-if="!followDialog.list.length" description="暂无数据" />
+        <div
+          v-for="u in followDialog.list"
+          :key="u.id"
+          class="follow-item"
+          @click="followDialog.visible = false; router.push(`/users/${u.id}`)"
+        >
+          <el-avatar :size="36" :src="resolveUploadUrl(u.avatar) || undefined">{{ (u.nickname || u.username || '?')[0] }}</el-avatar>
+          <div class="follow-info">
+            <div class="follow-name">{{ u.nickname || u.username }}</div>
+            <div class="follow-bio">{{ u.bio || '这个人很懒，什么都没留下' }}</div>
+          </div>
+        </div>
+        <el-pagination
+          v-if="followDialog.total > followDialog.size"
+          layout="prev, pager, next"
+          :total="followDialog.total"
+          :page-size="followDialog.size"
+          :current-page="followDialog.page"
+          @current-change="p => { followDialog.page = p; loadFollowList() }"
+        />
+      </template>
+    </el-dialog>
 
     <h3 class="section-title">TA 的文章</h3>
     <el-skeleton v-if="articlesLoading" :rows="6" animated />
@@ -69,7 +98,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getUserProfile, follow, unfollow, pageUserArticles } from '../api/social'
+import { getUserProfile, follow, unfollow, pageUserArticles, listFollowers, listFollowing } from '../api/social'
 import { resolveUploadUrl } from '../api/upload'
 import { useAuthStore } from '../stores/auth'
 
@@ -158,6 +187,41 @@ onMounted(init)
 </script>
 
 <style scoped>
+.actions {
+  display: flex;
+  gap: 8px;
+}
+.clickable {
+  cursor: pointer;
+}
+.clickable:hover {
+  color: #409eff;
+}
+.follow-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.follow-item:hover {
+  background: #f5f7fa;
+}
+.follow-info {
+  min-width: 0;
+}
+.follow-name {
+  font-weight: 500;
+  color: #303133;
+}
+.follow-bio {
+  font-size: 12px;
+  color: #909399;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .user-profile {
   max-width: 860px;
   margin: 0 auto;

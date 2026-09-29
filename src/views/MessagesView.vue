@@ -37,6 +37,9 @@
             <div ref="msgBoxRef" class="chat-body">
               <el-skeleton v-if="msgsLoading" :rows="4" animated />
               <template v-else>
+                <div v-if="messages.length && messages.length < msgTotal" class="load-more">
+                  <el-button link type="primary" size="small" @click="loadMoreMessages">加载更早的消息</el-button>
+                </div>
                 <el-empty v-if="!messages.length" description="暂无消息，打个招呼吧" />
                 <div
                   v-for="m in messages"
@@ -85,13 +88,18 @@
 
 <script setup>
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { listConversations, pageMessages, sendMessage, markConversationRead } from '../api/message'
+import { getUserProfile } from '../api/social'
 import { resolveUploadUrl } from '../api/upload'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
 
 const conversations = ref([])
+const msgPage = ref(1)
+const msgTotal = ref(0)
+const MSG_SIZE = 20
 const convsLoading = ref(true)
 const activePeer = ref(null)
 
@@ -125,7 +133,9 @@ async function loadMessages(silent = false) {
   if (!activePeer.value) return
   if (!silent) msgsLoading.value = true
   try {
-    const data = await pageMessages(activePeer.value.id, 1, 20)
+    const data = await pageMessages(activePeer.value.id, 1, MSG_SIZE)
+    msgPage.value = 1
+    msgTotal.value = Number(data.total) || 0
     messages.value = (data.records || []).slice().reverse()
     if (!silent) await nextTick()
     scrollToBottom()
@@ -168,11 +178,29 @@ async function send() {
   }
 }
 
-// 5s 轮询：拉当前会话新消息 + 会话列表（未读数/最后消息）
+// 5s 轮询：会话列表始终刷新（无会话时别人来第一条也能看到）；有活跃会话则拉新消息并顺手已读
 async function poll() {
+  loadConversations()
   if (!activePeer.value) return
   await loadMessages(true)
-  loadConversations()
+  markActiveRead()
+}
+
+// 通过 ?peerId= 发起新会话：会话列表里没有时，用用户资料构造一个临时会话
+async function openPeerFromQuery() {
+  const peerId = route.query.peerId
+  if (!peerId) return
+  const existed = conversations.value.find(c => String(c.peer?.id) === String(peerId))
+  if (existed) {
+    selectConversation(existed.peer)
+    return
+  }
+  try {
+    const profile = await getUserProfile(peerId)
+    const peer = { id: profile.id, nickname: profile.nickname, username: profile.username, avatar: profile.avatar }
+    conversations.value.unshift({ peer, lastMessage: null, unreadCount: 0 })
+    selectConversation(peer)
+  } catch { /* 用户不存在等，拦截器已提示 */ }
 }
 
 onMounted(async () => {
@@ -180,7 +208,11 @@ onMounted(async () => {
     try { await auth.fetchMe() } catch { /* 忽略 */ }
   }
   await loadConversations()
-  if (conversations.value.length) selectConversation(conversations.value[0].peer)
+  if (route.query.peerId) {
+    await openPeerFromQuery()
+  } else if (conversations.value.length) {
+    selectConversation(conversations.value[0].peer)
+  }
   pollTimer = setInterval(poll, 5000)
 })
 
@@ -259,6 +291,10 @@ onUnmounted(() => {
   font-weight: 600;
   color: #303133;
   border-bottom: 1px solid #ebeef5;
+}
+.load-more {
+  text-align: center;
+  padding: 4px 0;
 }
 .chat-body {
   flex: 1;
