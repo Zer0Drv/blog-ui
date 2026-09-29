@@ -195,6 +195,7 @@ import { listComments, listReplies, createComment, deleteComment } from '../api/
 import { likeComment, unlikeComment } from '../api/interaction'
 import { resolveUploadUrl } from '../api/upload'
 import { useAuthStore } from '../stores/auth'
+import { notifyCommentResult } from './comment-notify'
 
 const props = defineProps({
   articleId: { type: [String, Number], required: true }
@@ -242,14 +243,7 @@ function goLogin() {
   router.push('/login')
 }
 
-// createComment 返回完整 R 体：message 非 success 时（如命中敏感词进入审核）按后端提示 warning
-function notifyCommentResult(res, successText) {
-  if (res?.message && res.message !== 'success') {
-    ElMessage.warning(res.message)
-  } else {
-    ElMessage.success(successText)
-  }
-}
+// notifyCommentResult 抽至 ./comment-notify.js（便于单测；返回评论是否直接可见）
 
 async function load() {
   loading.value = true

@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 
 // 跨域一律走 vite 代理：浏览器只碰同源 5173，后端不开 CORS
@@ -16,6 +16,17 @@ export default defineConfig({
         target: process.env.API_TARGET || 'http://localhost:8082',
         changeOrigin: true,
         rewrite: p => p.replace(/^\/api/, '')
+      }
+    }
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    // vitest 默认 externalize node_modules，async-validator（CJS）经 Node ESM 导入时
+    // default 导出拿不到类本身（"AsyncValidator is not a constructor"），inline 后走 esbuild 预打包互操作
+    server: {
+      deps: {
+        inline: ['element-plus', 'async-validator', '@element-plus/icons-vue']
       }
     }
   }
