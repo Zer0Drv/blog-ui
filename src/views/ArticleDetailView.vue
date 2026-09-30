@@ -1,8 +1,10 @@
 <template>
-  <div class="detail">
+  <div class="detail" :class="{ 'with-toc': hasToc }">
     <el-skeleton v-if="loading" :rows="10" animated />
     <template v-else-if="article">
-      <el-card>
+      <div class="content-wrap">
+        <div class="main-col">
+          <el-card>
         <h1 class="title">{{ article.title }}</h1>
         <div class="meta">
           <span
@@ -40,9 +42,10 @@
           v-if="article.editorType === 'MARKDOWN'"
           :model-value="article.content || ''"
           :editor-id="previewId"
+          @on-get-catalog="onGetCatalog"
         />
         <!-- 后端文章内容由作者本人产生；RICHTEXT 模式按契约直接渲染 HTML -->
-        <div v-else class="richtext" v-html="article.content" />
+        <div v-else ref="richtextRef" class="richtext" v-html="article.content" />
 
         <!-- M3 互动栏：浏览量/点赞/收藏/评论数 -->
         <div class="interaction-bar">
@@ -77,21 +80,43 @@
         </div>
       </el-card>
 
-      <CommentSection :article-id="article.id" @change="onCommentChange" />
+          <CommentSection :article-id="article.id" @change="onCommentChange" />
+        </div>
+
+        <!-- P0 目录：宽屏（≥1100px）右侧 sticky，窄屏由 CSS order 收起到正文上方；无标题不渲染 -->
+        <aside v-if="hasToc" class="toc-aside">
+          <div class="toc-box">
+            <div class="toc-title">目录</div>
+            <!-- MARKDOWN：MdCatalog 通过 editorId 与页内 MdPreview 联动，默认文档滚动 -->
+            <MdCatalog v-if="isMarkdown" :editor-id="previewId" :scroll-element-offset-top="70" />
+            <!-- 富文本：渲染完成后从正文提取 h2/h3（≤20 条），点击平滑滚动 -->
+            <ul v-else class="toc-list">
+              <li
+                v-for="item in tocItems"
+                :key="item.id"
+                :class="`toc-lv-${item.level}`"
+              >
+                <a class="toc-link" @click="scrollToHeading(item)">{{ item.text }}</a>
+              </li>
+            </ul>
+          </div>
+        </aside>
+      </div>
     </template>
     <el-empty v-else description="文章不存在或已删除" />
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { MdPreview } from 'md-editor-v3'
+import { MdPreview, MdCatalog } from 'md-editor-v3'
 import 'md-editor-v3/lib/preview.css'
 import { ElMessage } from 'element-plus'
 import { View, Pointer, Star, ChatDotRound } from '@element-plus/icons-vue'
 import { getArticle } from '../api/article'
 import { likeArticle, unlikeArticle, favoriteArticle, unfavoriteArticle } from '../api/interaction'
+import { follow, unfollow, getUserProfile } from '../api/social'
 import { resolveUploadUrl } from '../api/upload'
 import { useAuthStore } from '../stores/auth'
 import CommentSection from '../components/CommentSection.vue'
@@ -120,6 +145,38 @@ function statusText(s) {
 
 function statusType(s) {
   return { DRAFT: 'info', PUBLISHED: 'success', OFFLINE: 'warning' }[s] || 'info'
+}
+
+// P0 文章目录（TOC）：MARKDOWN 走 MdCatalog（onGetCatalog 判空），富文本自行提取 h2/h3
+const isMarkdown = computed(() => article.value?.editorType === 'MARKDOWN')
+const mdCatalogList = ref([])
+const tocItems = ref([])
+const richtextRef = ref(null)
+const hasToc = computed(() =>
+  isMarkdown.value ? mdCatalogList.value.length > 0 : tocItems.value.length > 0)
+
+// MdPreview 渲染完成后吐出标题列表；为空则不渲染目录块
+function onGetCatalog(list) {
+  mdCatalogList.value = list || []
+}
+
+// 富文本目录：从正文容器提取 h2/h3，补 id（toc-0...）供锚点滚动，最多 20 条
+function buildRichtextToc() {
+  tocItems.value = []
+  const root = richtextRef.value
+  if (!root) return
+  const items = []
+  root.querySelectorAll('h2, h3').forEach(h => {
+    if (items.length >= 20) return
+    const id = `toc-${items.length}`
+    h.id = id
+    items.push({ id, text: (h.textContent || '').trim(), level: Number(h.tagName.slice(1)) })
+  })
+  tocItems.value = items
+}
+
+function scrollToHeading(item) {
+  document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' })
 }
 
 // M3 互动：点赞/收藏（匿名点击跳登录）
@@ -216,6 +273,11 @@ onMounted(async () => {
   try {
     article.value = await getArticle(route.params.id)
     loadAuthorFollowState()
+    // 富文本：等 v-html 渲染完成后再提取目录（MARKDOWN 由 MdCatalog 自动联动）
+    if (article.value && article.value.editorType !== 'MARKDOWN') {
+      await nextTick()
+      buildRichtextToc()
+    }
   } catch { /* 拦截器已提示 */ } finally {
     loading.value = false
   }
@@ -226,6 +288,76 @@ onMounted(async () => {
 .detail {
   max-width: 860px;
   margin: 0 auto;
+}
+/* 有目录时放宽整页宽度，给右侧目录留位 */
+.detail.with-toc {
+  max-width: 1120px;
+}
+.content-wrap {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+.main-col {
+  flex: 1;
+  min-width: 0;
+}
+.toc-aside {
+  width: 240px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 76px;
+}
+.toc-box {
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  padding: 14px 16px;
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+}
+.toc-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #303133;
+  margin-bottom: 10px;
+}
+.toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.toc-list li {
+  margin: 6px 0;
+}
+.toc-lv-3 {
+  padding-left: 14px;
+}
+.toc-link {
+  cursor: pointer;
+  color: #606266;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.toc-link:hover {
+  color: #409eff;
+}
+/* 窄屏：目录收起到正文上方，取消 sticky */
+@media (max-width: 1099px) {
+  .content-wrap {
+    flex-direction: column;
+  }
+  .toc-aside {
+    order: -1;
+    width: 100%;
+    position: static;
+  }
+  .main-col {
+    width: 100%;
+  }
+  .toc-box {
+    max-height: 300px;
+  }
 }
 .title {
   margin: 0 0 12px;

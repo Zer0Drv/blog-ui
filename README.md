@@ -1,7 +1,18 @@
 # blog-ui — 动态博客前端
 
-配套后端 [`Zer0Drv/blog`](https://github.com/Zer0Drv/blog)。**当前进度：M1–M5（用户/内容/互动/社交/后台）+ M6（GitHub OAuth、MinIO）已完成**；
+配套后端 [`Zer0Drv/blog`](https://github.com/Zer0Drv/blog)。**当前进度：M1–M5（用户/内容/互动/社交/后台）+ M6（GitHub OAuth、MinIO）+ P0（对标 WordPress/Halo）已完成**；
 增量功能：个人设置页、自适应图形验证码（频率触发）、私信/通知 WebSocket 实时推送（轮询兜底）。需求基线见后端仓库 `docs/requirements-v1.md`。
+
+## P0 增量（2026-09-30）
+
+- **编辑器增强**：自动保存（已有文章走服务端 `/articles/{id}/autosave` 30s 防抖，新文章走 localStorage `draft:new`，进入时提示恢复）、定时发布弹窗（立即/定时 + datetime 选择）、历史版本抽屉（列表/只读预览/一键恢复）。
+- **我的文章**：回收站模式（恢复回草稿 / 彻底删除）、「定时中」状态标识。
+- **附件库**：`/my/attachments` 分组管理 + 图片网格（上传/搜索/换组/复制链接/删除）；编辑器封面支持「从附件库选择」（AttachmentPicker）。
+- **阅读侧**：文章详情目录 TOC（Markdown 用 MdCatalog / 富文本解析 h2-h3，滚动定位）；`/archives` 归档时间线；`/search` 全文搜索页（query 驱动 + 分页）。
+- **后台**：评论审核队列（PENDING 通过/拒绝）与评论回收站（恢复/彻底删除）；`/admin/site` 站点设置（站名/描述/logo/ICP/页脚/base_url/评论审核开关）。
+- **布局**：顶栏搜索框与「归档」导航；品牌名与页脚（描述/ICP/RSS/Atom 链接）接入公开站点配置 `GET /site/config`（sessionStorage 缓存）。
+- **设置页**：通知偏好卡片（评论回复邮件通知开关）。
+- 顺带修复两个存量 bug：`ArticleEditView` 缺 `useAuthStore` 导入（编辑已有文章必现 ReferenceError）、`ArticleDetailView` 缺 `follow/unfollow/getUserProfile` 导入。
 
 ## 技术栈
 
@@ -84,4 +95,4 @@ pnpm preview    # 预览构建产物
 
 ## 路线图
 
-v1（M1–M5）+ M6 已完成。后续候选：WebSocket 覆盖更多实时场景、AI 辅助评论审核、全文搜索、生产部署链路（镜像化）。
+v1（M1–M5）+ M6 + P0 已完成。后续候选：slug 固定链接、文章密码保护、Markdown 导入导出、友情链接、自定义页面、TOTP 两步验证、AI 摘要/评论审核增强、生产部署链路（镜像化）。

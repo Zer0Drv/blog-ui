@@ -51,7 +51,9 @@
         </el-table-column>
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'FOLDED' ? 'warning' : 'success'" size="small">
+            <el-tag v-if="status === 'TRASH'" type="info" size="small">已删除</el-tag>
+            <el-tag v-else-if="row.status === 'PENDING'" type="warning" size="small">待审核</el-tag>
+            <el-tag v-else :type="row.status === 'FOLDED' ? 'warning' : 'success'" size="small">
               {{ row.status === 'FOLDED' ? '已折叠' : '正常' }}
             </el-tag>
           </template>
@@ -159,7 +161,7 @@ async function onUnfold(row) {
 
 async function onDelete(row) {
   try {
-    await ElMessageBox.confirm('确认删除该评论？连带回复将一并删除，且不可恢复。', '警告', {
+    await ElMessageBox.confirm('确认删除该评论？删除后可在回收站恢复。', '警告', {
       type: 'error',
       confirmButtonText: '删除',
       cancelButtonText: '取消'
@@ -168,6 +170,51 @@ async function onDelete(row) {
   try {
     await deleteAdminComment(row.id)
     ElMessage.success('已删除')
+    if (rows.value.length === 1 && page.value > 1) page.value -= 1
+    load()
+  } catch { /* 拦截器已提示 */ }
+}
+
+// P0 审核：仅 PENDING 可通过（通过后会补发评论通知）
+async function onApprove(row) {
+  try {
+    await approveComment(row.id)
+    ElMessage.success('已通过')
+    load()
+  } catch { /* 拦截器已提示 */ }
+}
+
+// P0 审核：拒绝后评论进入已折叠（不通知）
+async function onReject(row) {
+  try {
+    await rejectComment(row.id)
+    ElMessage.success('已拒绝')
+    load()
+  } catch { /* 拦截器已提示 */ }
+}
+
+// P0 回收站：恢复（主评论的已删回复一并恢复）
+async function onRestore(row) {
+  try {
+    await restoreComment(row.id)
+    ElMessage.success('已恢复')
+    if (rows.value.length === 1 && page.value > 1) page.value -= 1
+    load()
+  } catch { /* 拦截器已提示 */ }
+}
+
+// P0 回收站：彻底删除（物理删除，不可恢复）
+async function onForceDelete(row) {
+  try {
+    await ElMessageBox.confirm('彻底删除将物理清除该评论及其回复，不可恢复，确认继续？', '警告', {
+      type: 'error',
+      confirmButtonText: '彻底删除',
+      cancelButtonText: '取消'
+    })
+  } catch { return }
+  try {
+    await forceDeleteComment(row.id)
+    ElMessage.success('已彻底删除')
     if (rows.value.length === 1 && page.value > 1) page.value -= 1
     load()
   } catch { /* 拦截器已提示 */ }

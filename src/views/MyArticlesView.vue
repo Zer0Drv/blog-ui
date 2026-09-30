@@ -29,7 +29,10 @@
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="statusType(row.status)" size="small">{{ statusText(row.status) }}</el-tag>
+            <el-tooltip v-if="isScheduled(row)" :content="`将于 ${formatTime(row.publishTime)} 发布`" placement="top">
+              <el-tag type="warning" size="small">定时中</el-tag>
+            </el-tooltip>
+            <el-tag v-else :type="statusType(row.status)" size="small">{{ statusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="categoryName" label="分类" width="120">
@@ -85,7 +88,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { deleteArticle, pageMyArticles, updateArticleStatus } from '../api/article'
+import { deleteArticle, forceDeleteArticle, pageMyArticles, restoreArticle, updateArticleStatus } from '../api/article'
 
 const router = useRouter()
 
@@ -135,7 +138,7 @@ async function onChangeStatus(row, target) {
 
 async function onDelete(row) {
   try {
-    await ElMessageBox.confirm(`确认删除《${row.title}》？删除后不可恢复。`, '警告', {
+    await ElMessageBox.confirm(`确认删除《${row.title}》？删除后可在回收站恢复。`, '警告', {
       type: 'error',
       confirmButtonText: '删除',
       cancelButtonText: '取消'
@@ -143,10 +146,48 @@ async function onDelete(row) {
   } catch { return }
   try {
     await deleteArticle(row.id)
-    ElMessage.success('已删除')
+    ElMessage.success('已删除，可在回收站恢复')
     if (rows.value.length === 1 && page.value > 1) page.value -= 1
     load()
   } catch { /* 拦截器已提示 */ }
+}
+
+async function onRestore(row) {
+  try {
+    await ElMessageBox.confirm(`确认恢复《${row.title}》？恢复后将回到草稿状态。`, '提示', {
+      type: 'info',
+      confirmButtonText: '恢复',
+      cancelButtonText: '取消'
+    })
+  } catch { return }
+  try {
+    await restoreArticle(row.id)
+    ElMessage.success('已恢复为草稿')
+    if (rows.value.length === 1 && page.value > 1) page.value -= 1
+    load()
+  } catch { /* 拦截器已提示 */ }
+}
+
+async function onForceDelete(row) {
+  try {
+    await ElMessageBox.confirm(`确认彻底删除《${row.title}》？删除后不可恢复！`, '警告', {
+      type: 'error',
+      confirmButtonText: '彻底删除',
+      cancelButtonText: '取消'
+    })
+  } catch { return }
+  try {
+    await forceDeleteArticle(row.id)
+    ElMessage.success('已彻底删除')
+    if (rows.value.length === 1 && page.value > 1) page.value -= 1
+    load()
+  } catch { /* 拦截器已提示 */ }
+}
+
+// 定时中：已发布但发布时间晚于当前（publishTime 已在 ArticleListVO）
+function isScheduled(row) {
+  return row.status === 'PUBLISHED' && row.publishTime
+    && new Date(String(row.publishTime).replace(' ', 'T')).getTime() > Date.now()
 }
 
 function statusText(s) {

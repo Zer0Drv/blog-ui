@@ -2,12 +2,26 @@
   <div class="layout">
     <header class="topbar">
       <div class="topbar-inner">
-        <router-link to="/" class="brand">Blog</router-link>
+        <router-link to="/" class="brand">{{ siteName }}</router-link>
         <nav class="nav">
           <router-link to="/" class="nav-link">首页</router-link>
+          <router-link to="/archives" class="nav-link">归档</router-link>
           <router-link v-if="auth.isLoggedIn" to="/feed" class="nav-link">动态</router-link>
         </nav>
         <div class="spacer" />
+        <!-- P0 全文搜索入口：回车跳 /search?keyword=（窄屏隐藏） -->
+        <el-input
+          v-model="searchKeyword"
+          class="search-input"
+          size="small"
+          placeholder="搜索文章"
+          clearable
+          @keyup.enter="onSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
         <template v-if="auth.isLoggedIn">
           <el-button v-if="canWrite" type="primary" @click="router.push('/editor/new')">
             写文章
@@ -44,20 +58,72 @@
     <main class="content">
       <router-view />
     </main>
+    <!-- P0 页脚：站点描述 / ICP / RSS / Atom -->
+    <footer class="footer">
+      <div class="footer-inner">
+        <span v-if="siteDescription" class="footer-desc">{{ siteDescription }}</span>
+        <span class="footer-links">
+          <a href="/api/rss.xml" target="_blank" rel="noopener">RSS</a>
+          <a href="/api/atom.xml" target="_blank" rel="noopener">Atom</a>
+        </span>
+        <span v-if="siteIcp" class="footer-icp">{{ siteIcp }}</span>
+      </div>
+    </footer>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowDown, Bell } from '@element-plus/icons-vue'
+import { ArrowDown, Bell, Search } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
 import { getUnreadCount } from '../api/notification'
+import { getSiteConfig } from '../api/site'
 
 const auth = useAuthStore()
 const router = useRouter()
 
 const canWrite = computed(() => ['ADMIN', 'AUTHOR'].includes(auth.user?.role))
+
+// P0 搜索框：回车跳搜索页
+const searchKeyword = ref('')
+
+function onSearch() {
+  const kw = searchKeyword.value.trim()
+  if (!kw) return
+  router.push({ path: '/search', query: { keyword: kw } })
+}
+
+// P0 站点信息：品牌名/页脚；GET /site/config 结果缓存 sessionStorage，失败静默保留默认
+const siteName = ref('Blog')
+const siteDescription = ref('')
+const siteIcp = ref('')
+
+function applySiteConfig(config) {
+  if (!config) return
+  if (config['site.name']) siteName.value = config['site.name']
+  siteDescription.value = config['site.description'] || ''
+  siteIcp.value = config['site.icp'] || ''
+}
+
+async function loadSiteConfig() {
+  try {
+    const cached = sessionStorage.getItem('site:config')
+    if (cached) {
+      applySiteConfig(JSON.parse(cached))
+      return
+    }
+  } catch { /* 缓存损坏则走接口 */ }
+  try {
+    const data = await getSiteConfig()
+    applySiteConfig(data)
+    try {
+      sessionStorage.setItem('site:config', JSON.stringify(data || {}))
+    } catch { /* 存储失败静默 */ }
+  } catch { /* 失败静默，保留默认 Blog */ }
+}
+
+onMounted(loadSiteConfig)
 
 onMounted(() => {
   if (auth.isLoggedIn && !auth.user) auth.fetchMe().catch(() => {})
@@ -132,6 +198,8 @@ async function onCommand(cmd) {
 .layout {
   min-height: 100vh;
   background: #f5f7fa;
+  display: flex;
+  flex-direction: column;
 }
 .topbar {
   background: #fff;
@@ -194,5 +262,42 @@ async function onCommand(cmd) {
   max-width: 1100px;
   margin: 0 auto;
   padding: 20px 16px 40px;
+}
+/* P0 顶部搜索框：窄屏隐藏 */
+.search-input {
+  width: 200px;
+}
+@media (max-width: 768px) {
+  .search-input {
+    display: none;
+  }
+}
+/* P0 页脚 */
+.footer {
+  border-top: 1px solid #e4e7ed;
+  background: #fff;
+}
+.footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 16px;
+  font-size: 13px;
+  color: #909399;
+}
+.footer-links {
+  display: inline-flex;
+  gap: 12px;
+}
+.footer-links a {
+  color: #409eff;
+  text-decoration: none;
+}
+.footer-links a:hover {
+  text-decoration: underline;
 }
 </style>

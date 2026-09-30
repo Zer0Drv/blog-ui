@@ -72,7 +72,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
-import { updateMyProfile, changeMyPassword } from '../api/user'
+import { updateMyProfile, changeMyPassword, getMyPreferences, updateMyPreferences } from '../api/user'
 import { uploadImage, resolveUploadUrl } from '../api/upload'
 
 const router = useRouter()
@@ -162,7 +162,32 @@ onMounted(async () => {
     try { await auth.fetchMe() } catch { /* 拦截器已提示 */ }
   }
   fillProfile()
+  loadPreferences()
 })
+
+// ---- 通知偏好卡片（P0）：切换即保存 ----
+const emailNotifyEnabled = ref(true)
+const prefLoading = ref(false)
+
+async function loadPreferences() {
+  try {
+    const data = await getMyPreferences()
+    emailNotifyEnabled.value = Boolean(data?.emailNotifyEnabled)
+  } catch { /* 拦截器已提示 */ }
+}
+
+async function onToggleEmailNotify(value) {
+  prefLoading.value = true
+  try {
+    await updateMyPreferences({ emailNotifyEnabled: value })
+    ElMessage.success(value ? '已开启邮件通知' : '已关闭邮件通知')
+  } catch {
+    // 拦截器已提示；保存失败回滚开关
+    emailNotifyEnabled.value = !value
+  } finally {
+    prefLoading.value = false
+  }
+}
 </script>
 
 <style scoped>

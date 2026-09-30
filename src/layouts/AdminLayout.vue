@@ -53,7 +53,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChatDotSquare, Collection, Document, Lock, Odometer, User } from '@element-plus/icons-vue'
+import { ChatDotSquare, Collection, Document, Lock, Odometer, Setting, User } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -63,7 +63,8 @@ const titles = {
   '/admin/articles': '文章管理',
   '/admin/comments': '评论治理',
   '/admin/sensitive-words': '敏感词库',
-  '/admin/users': '用户管理'
+  '/admin/users': '用户管理',
+  '/admin/site': '站点设置'
 }
 
 const pageTitle = computed(() => titles[route.path] || '管理后台')

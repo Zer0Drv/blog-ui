@@ -12,8 +12,13 @@ const routes = [
     children: [
       { path: '', name: 'home', component: () => import('../views/HomeView.vue'), meta: { public: true } },
       { path: 'article/:id', name: 'article-detail', component: () => import('../views/ArticleDetailView.vue'), meta: { public: true } },
+      // P0 阅读侧：归档/全文搜索（公开，组件由 frontend-E 提供）
+      { path: 'archives', name: 'archives', component: () => import('../views/ArchivesView.vue'), meta: { public: true } },
+      { path: 'search', name: 'search', component: () => import('../views/SearchView.vue'), meta: { public: true } },
       { path: 'my/articles', name: 'my-articles', component: () => import('../views/MyArticlesView.vue'), meta: { roles: ['ADMIN', 'AUTHOR'] } },
       { path: 'my/favorites', name: 'my-favorites', component: () => import('../views/MyFavoritesView.vue') },
+      // P0 作者侧：附件库（需登录，组件由 frontend-D 提供）
+      { path: 'my/attachments', name: 'my-attachments', component: () => import('../views/AttachmentsView.vue') },
       { path: 'settings', name: 'settings', component: () => import('../views/SettingsView.vue') },
       // M4 社交：通知/用户主页/关注动态/私信（/users/:id 公开，其余需登录）
       { path: 'notifications', name: 'notifications', component: () => import('../views/NotificationsView.vue') },

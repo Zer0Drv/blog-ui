@@ -90,29 +90,73 @@
         </el-form-item>
 
         <div class="actions">
+          <span v-if="autosaveTip" class="autosave-tip">{{ autosaveTip }}</span>
+          <el-button v-if="articleId" @click="historyVisible = true">历史版本</el-button>
           <el-button :loading="saving" @click="onSave('DRAFT')">保存草稿</el-button>
-          <el-button type="primary" :loading="saving" @click="onSave('PUBLISHED')">发布</el-button>
+          <el-button type="primary" :loading="saving" @click="openPublishDialog">发布</el-button>
         </div>
       </el-form>
     </el-card>
+
+    <!-- 发布方式弹窗：立即 / 定时 -->
+    <el-dialog v-model="publishDialogVisible" title="发布文章" width="420px">
+      <el-radio-group v-model="publishMode">
+        <el-radio value="now">立即发布</el-radio>
+        <el-radio value="schedule">定时发布</el-radio>
+      </el-radio-group>
+      <div v-if="publishMode === 'schedule'" class="schedule-box">
+        <el-date-picker
+          v-model="publishTime"
+          type="datetime"
+          placeholder="选择发布时间"
+          :disabled-date="disabledPublishDate"
+        />
+        <div class="schedule-tip">发布时间需晚于当前时间至少 5 分钟</div>
+      </div>
+      <template #footer>
+        <el-button @click="publishDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="saving" @click="confirmPublish">确认发布</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 历史版本抽屉 -->
+    <VersionHistoryDrawer
+      v-if="articleId"
+      v-model:visible="historyVisible"
+      :article-id="articleId"
+      @restored="reloadArticle"
+    />
+
+    <!-- 封面附件库选择 -->
+    <AttachmentPicker v-model:visible="pickerVisible" @select="onPickCover" />
   </div>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, shallowRef } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import '@wangeditor/editor/dist/css/style.css'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
-import { createArticle, getArticle, updateArticle } from '../api/article'
+import {
+  autosaveArticle,
+  createArticle,
+  getArticle,
+  getAutosave,
+  updateArticle
+} from '../api/article'
 import { listCategories } from '../api/category'
 import { listTags } from '../api/tag'
 import { resolveUploadUrl, uploadImage } from '../api/upload'
+import { useAuthStore } from '../stores/auth'
+import AttachmentPicker from '../components/AttachmentPicker.vue'
+import VersionHistoryDrawer from '../components/VersionHistoryDrawer.vue'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 
 const articleId = computed(() => route.params.id || null)
 const modeLocked = ref(false)
@@ -158,6 +202,12 @@ function onEditorCreated(editor) {
 }
 
 onBeforeUnmount(() => {
+  // 卸载前对已存在文章补一次自动保存（新文章草稿已实时落在 localStorage）
+  if (autosaveTimer) clearTimeout(autosaveTimer)
+  if (dirty.value && articleId.value) {
+    const body = buildAutosaveBody()
+    if (body) autosaveArticle(articleId.value, body).catch(() => {})
+  }
   editorRef.value?.destroy()
   editorRef.value = undefined
 })
@@ -214,6 +264,95 @@ function onEditorTypeChange(val) {
   }).catch(() => {})
 }
 
+/* ---------- 自动保存 ---------- */
+const DRAFT_NEW_KEY = 'draft:new'
+const AUTOSAVE_DELAY = 30 * 1000
+
+const dirty = ref(false)
+const lastAutosavedAt = ref('')
+const initialized = ref(false)
+let autosaveTimer = null
+
+const autosaveTip = computed(() => {
+  if (dirty.value) return '有未保存的修改'
+  return lastAutosavedAt.value ? `已自动保存 ${lastAutosavedAt.value}` : ''
+})
+
+function pad2(n) {
+  return String(n).padStart(2, '0')
+}
+
+// 本地时间 yyyy-MM-ddTHH:mm:ss（后端 Jackson 默认 ISO 格式）
+function formatLocalDateTime(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
+}
+
+function formatClock(t) {
+  const d = new Date(Number(t))
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
+
+function buildAutosaveBody() {
+  const content = currentContent()
+  // 正文为空不自动保存（后端 content 非空校验）
+  if (!content.replace(/<[^>]+>/g, '').trim()) return null
+  return {
+    title: form.title.trim(),
+    content,
+    summary: form.summary,
+    cover: form.cover,
+    categoryId: form.categoryId || null
+  }
+}
+
+function scheduleAutosave() {
+  // 初始填充/版本恢复不触发自动保存计时
+  if (!initialized.value) return
+  dirty.value = true
+  if (autosaveTimer) clearTimeout(autosaveTimer)
+  autosaveTimer = setTimeout(doAutosave, AUTOSAVE_DELAY)
+}
+
+watch(
+  [() => form.title, () => form.summary, () => form.cover, () => form.categoryId, mdContent, htmlContent],
+  scheduleAutosave
+)
+
+async function doAutosave() {
+  if (!dirty.value) return
+  const body = buildAutosaveBody()
+  if (!body) return
+  if (articleId.value) {
+    try {
+      const data = await autosaveArticle(articleId.value, body)
+      lastAutosavedAt.value = formatClock(data?.savedAt || Date.now())
+      dirty.value = false
+    } catch { /* 拦截器已提示 */ }
+  } else {
+    // 新文章无服务端 autosave，落 localStorage
+    localStorage.setItem(DRAFT_NEW_KEY, JSON.stringify({ ...body, savedAt: Date.now() }))
+    lastAutosavedAt.value = formatClock(Date.now())
+    dirty.value = false
+  }
+}
+
+function fillDraft(draft) {
+  if (draft.title != null) form.title = draft.title
+  if (draft.summary != null) form.summary = draft.summary
+  if (draft.cover != null) form.cover = draft.cover
+  if (draft.categoryId !== undefined) form.categoryId = draft.categoryId || null
+  if (draft.content != null) {
+    if (form.editorType === 'MARKDOWN') mdContent.value = draft.content
+    else htmlContent.value = draft.content
+  }
+}
+
+function clearDraftMarks() {
+  dirty.value = false
+  if (autosaveTimer) clearTimeout(autosaveTimer)
+  localStorage.removeItem(DRAFT_NEW_KEY)
+}
+
 /* ---------- 保存 ---------- */
 function currentContent() {
   return form.editorType === 'MARKDOWN' ? mdContent.value : htmlContent.value
@@ -232,7 +371,7 @@ function validate(content) {
   return true
 }
 
-async function onSave(status) {
+async function onSave(status, publishTime) {
   const content = currentContent()
   if (!validate(content)) return
   saving.value = true
@@ -247,6 +386,8 @@ async function onSave(status) {
       tagIds: form.tagIds,
       status
     }
+    // 定时发布：仅在发布且选择了未来时间时携带（草稿忽略）
+    if (status === 'PUBLISHED' && publishTime) body.publishTime = publishTime
     if (articleId.value) {
       await updateArticle(articleId.value, body)
     } else {
@@ -257,9 +398,84 @@ async function onSave(status) {
         router.replace(`/editor/${newId}`)
       }
     }
-    ElMessage.success(status === 'PUBLISHED' ? '发布成功' : '草稿已保存')
+    // 服务端会自删 autosave；本地清 localStorage 草稿与未保存标记
+    clearDraftMarks()
+    publishDialogVisible.value = false
+    ElMessage.success(
+      status === 'PUBLISHED'
+        ? (publishTime ? '已设置定时发布' : '发布成功')
+        : '草稿已保存'
+    )
   } catch { /* 拦截器已提示 */ } finally {
     saving.value = false
+  }
+}
+
+/* ---------- 发布弹窗（立即/定时） ---------- */
+const publishDialogVisible = ref(false)
+const publishMode = ref('now')
+const publishTime = ref(null)
+
+function openPublishDialog() {
+  publishMode.value = 'now'
+  publishTime.value = null
+  publishDialogVisible.value = true
+}
+
+// 禁选今天以前的日期；具体时刻在确认时校验
+function disabledPublishDate(date) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return date.getTime() < today.getTime()
+}
+
+function confirmPublish() {
+  if (publishMode.value === 'schedule') {
+    if (!publishTime.value) {
+      ElMessage.warning('请选择定时发布时间')
+      return
+    }
+    if (publishTime.value.getTime() <= Date.now() + 5 * 60 * 1000) {
+      ElMessage.warning('定时发布时间需晚于当前时间至少 5 分钟')
+      return
+    }
+    onSave('PUBLISHED', formatLocalDateTime(publishTime.value))
+  } else {
+    onSave('PUBLISHED')
+  }
+}
+
+/* ---------- 封面：附件库选择 ---------- */
+const pickerVisible = ref(false)
+
+function onPickCover(url) {
+  form.cover = url
+}
+
+/* ---------- 历史版本 ---------- */
+const historyVisible = ref(false)
+
+async function reloadArticle() {
+  // 恢复版本成功后重新拉取文章填表单（服务端恢复前已对当前行留快照）
+  try {
+    const a = await getArticle(articleId.value)
+    fillArticle(a)
+  } catch { /* 拦截器已提示 */ }
+}
+
+function fillArticle(a) {
+  form.title = a.title || ''
+  form.summary = a.summary || ''
+  form.cover = a.cover || ''
+  form.categoryId = a.categoryId || null
+  form.tagIds = (a.tags || []).map(t => t.id)
+  form.editorType = a.editorType || 'MARKDOWN'
+  prevEditorType.value = form.editorType
+  modeLocked.value = true
+  if (a.editorType === 'MARKDOWN') {
+    mdContent.value = a.content || ''
+  } else {
+    htmlContent.value = a.content || ''
   }
 }
 
@@ -268,7 +484,24 @@ onMounted(async () => {
   listCategories().then(d => { categories.value = d || [] }).catch(() => {})
   listTags().then(d => { tags.value = d || [] }).catch(() => {})
 
-  if (!articleId.value) return
+  if (!articleId.value) {
+    // 新文章：检测 localStorage 草稿
+    const raw = localStorage.getItem(DRAFT_NEW_KEY)
+    if (raw) {
+      try {
+        const draft = JSON.parse(raw)
+        await ElMessageBox.confirm(
+          `检测到本地草稿（${draft.savedAt ? formatClock(draft.savedAt) : '未知时间'}），恢复？`,
+          '恢复草稿',
+          { type: 'info', confirmButtonText: '恢复', cancelButtonText: '不恢复' }
+        ).then(() => fillDraft(draft)).catch(() => {
+          localStorage.removeItem(DRAFT_NEW_KEY)
+        })
+      } catch { /* 草稿损坏直接忽略 */ }
+    }
+    initialized.value = true
+    return
+  }
   pageLoading.value = true
   try {
     const a = await getArticle(articleId.value)
@@ -278,21 +511,22 @@ onMounted(async () => {
       router.replace({ name: 'my-articles' })
       return
     }
-    form.title = a.title || ''
-    form.summary = a.summary || ''
-    form.cover = a.cover || ''
-    form.categoryId = a.categoryId || null
-    form.tagIds = (a.tags || []).map(t => t.id)
-    form.editorType = a.editorType || 'MARKDOWN'
-    prevEditorType.value = form.editorType
-    modeLocked.value = true
-    if (a.editorType === 'MARKDOWN') {
-      mdContent.value = a.content || ''
-    } else {
-      htmlContent.value = a.content || ''
-    }
+    fillArticle(a)
+    // 服务端自动保存草稿：savedAt 晚于文章 updateTime 时提示恢复
+    try {
+      const draft = await getAutosave(articleId.value)
+      const articleTime = a.updateTime ? new Date(String(a.updateTime).replace(' ', 'T')).getTime() : 0
+      if (draft?.exists && Number(draft.savedAt) > articleTime) {
+        await ElMessageBox.confirm(
+          `检测到自动保存草稿（${formatClock(draft.savedAt)}），恢复？`,
+          '恢复草稿',
+          { type: 'info', confirmButtonText: '恢复', cancelButtonText: '不恢复' }
+        ).then(() => fillDraft(draft)).catch(() => {})
+      }
+    } catch { /* 拦截器已提示 */ }
   } catch { /* 拦截器已提示 */ } finally {
     pageLoading.value = false
+    initialized.value = true
   }
 })
 </script>
@@ -344,6 +578,20 @@ onMounted(async () => {
 .actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 12px;
+}
+.autosave-tip {
+  margin-right: auto;
+  color: #909399;
+  font-size: 12px;
+}
+.schedule-box {
+  margin-top: 14px;
+}
+.schedule-tip {
+  margin-top: 8px;
+  color: #909399;
+  font-size: 12px;
 }
 </style>

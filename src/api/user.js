@@ -10,3 +10,13 @@ export function updateMyProfile(payload) {
 export function changeMyPassword(payload) {
   return http.put('/auth/password', payload)
 }
+
+// P0 通知偏好：GET /users/me/preferences → { emailNotifyEnabled }
+export function getMyPreferences() {
+  return http.get('/users/me/preferences')
+}
+
+// P0 通知偏好：PUT /users/me/preferences，body { emailNotifyEnabled: boolean }
+export function updateMyPreferences(payload) {
+  return http.put('/users/me/preferences', payload)
+}

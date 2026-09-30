@@ -54,6 +54,24 @@ export function deleteAdminComment(id) {
   return http.delete(`/admin/comments/${id}`)
 }
 
+// P0 评论审核：仅 PENDING 状态可通过/拒绝
+export function approveComment(id) {
+  return http.put(`/admin/comments/${id}/approve`)
+}
+
+export function rejectComment(id) {
+  return http.put(`/admin/comments/${id}/reject`)
+}
+
+// P0 评论回收站：恢复（deleted=1 → 正常）/ 彻底删除（物理删除）
+export function restoreComment(id) {
+  return http.post(`/admin/comments/${id}/restore`)
+}
+
+export function forceDeleteComment(id) {
+  return http.delete(`/admin/comments/${id}/force`)
+}
+
 // ---- 敏感词库 ----
 export function pageSensitiveWords(params) {
   return http.get('/admin/sensitive-words', { params })
@@ -74,4 +92,14 @@ export function getStatsOverview() {
 
 export function getStatsRecent() {
   return http.get('/admin/stats/recent')
+}
+
+// ---- 站点设置（P0）----
+export function getAdminSiteConfig() {
+  return http.get('/admin/site/config')
+}
+
+// values 为 7 键 map：site.name/site.description/site.logo/site.icp/site.footer/site.base_url/comment.review_required
+export function saveAdminSiteConfig(values) {
+  return http.put('/admin/site/config', values)
 }
