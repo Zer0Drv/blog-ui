@@ -108,6 +108,7 @@ const activePeer = ref(null)
 
 const messages = ref([])
 const msgsLoading = ref(false)
+const loadingMore = ref(false)
 const msgBoxRef = ref(null)
 
 const draft = ref('')
@@ -152,6 +153,27 @@ function scrollToBottom() {
   if (el) el.scrollTop = el.scrollHeight
 }
 
+// 加载更早的一页：前插到消息头部，并按滚动高度差补偿，避免视口跳动
+async function loadMoreMessages() {
+  if (!activePeer.value || loadingMore.value) return
+  if (messages.value.length >= msgTotal.value) return
+  loadingMore.value = true
+  const el = msgBoxRef.value
+  const prevHeight = el ? el.scrollHeight : 0
+  const prevTop = el ? el.scrollTop : 0
+  try {
+    const data = await pageMessages(activePeer.value.id, msgPage.value + 1, MSG_SIZE)
+    const older = (data.records || []).slice().reverse()
+    if (!older.length) return
+    msgPage.value += 1
+    messages.value = older.concat(messages.value)
+    await nextTick()
+    if (el) el.scrollTop = prevTop + (el.scrollHeight - prevHeight)
+  } catch { /* 拦截器已提示 */ } finally {
+    loadingMore.value = false
+  }
+}
+
 // 切换会话：拉消息 + 清未读 + 刷新会话列表未读数
 async function selectConversation(peer) {
   if (!peer || activePeer.value?.id === peer.id) return
@@ -181,6 +203,18 @@ async function send() {
   }
 }
 
+// 把当前会话中发给我的未读消息标记已读，并清零会话列表里的未读角标
+function markActiveRead() {
+  if (!activePeer.value) return
+  const peerId = activePeer.value.id
+  markConversationRead(peerId)
+    .then(() => {
+      const c = conversations.value.find(x => x.peer?.id === peerId)
+      if (c) c.unreadCount = 0
+    })
+    .catch(() => {})
+}
+
 // 5s 轮询：会话列表始终刷新（无会话时别人来第一条也能看到）；有活跃会话则拉新消息并顺手已读
 async function poll() {
   loadConversations()
@@ -188,6 +222,35 @@ async function poll() {
   await loadMessages(true)
   markActiveRead()
 }
+
+function startPolling() {
+  stopPolling()
+  pollTimer = setInterval(poll, 5000)
+}
+
+function stopPolling() {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+}
+
+// WS 推送的私信：当前会话则刷新消息并标记已读，否则只刷新会话列表（未读角标/最后一条）
+function onRealtimeMessage(msg) {
+  if (!msg) return
+  if (activePeer.value && String(msg.senderId) === String(activePeer.value.id)) {
+    loadMessages(true)
+    markActiveRead()
+  } else {
+    loadConversations()
+  }
+}
+
+// WS 连接状态联动轮询兜底：断开起 5s 轮询，连上即停
+watch(() => realtime.connected, ok => {
+  if (ok) stopPolling()
+  else startPolling()
+})
 
 // 通过 ?peerId= 发起新会话：会话列表里没有时，用用户资料构造一个临时会话
 async function openPeerFromQuery() {

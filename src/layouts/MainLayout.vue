@@ -46,6 +46,7 @@
                 <el-dropdown-item v-if="canWrite" command="mine">我的文章</el-dropdown-item>
                 <el-dropdown-item command="favorites">我的收藏</el-dropdown-item>
                 <el-dropdown-item command="messages">私信</el-dropdown-item>
+                <el-dropdown-item command="settings">个人设置</el-dropdown-item>
                 <el-dropdown-item command="feed">关注动态</el-dropdown-item>
                 <el-dropdown-item command="logout" divided>登出</el-dropdown-item>
               </el-dropdown-menu>

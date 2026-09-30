@@ -34,6 +34,10 @@
           <el-icon><User /></el-icon>
           <span>用户管理</span>
         </el-menu-item>
+        <el-menu-item index="/admin/site">
+          <el-icon><Setting /></el-icon>
+          <span>站点设置</span>
+        </el-menu-item>
       </el-menu>
     </aside>
 

@@ -43,24 +43,31 @@
         </el-table-column>
         <el-table-column label="操作" width="230" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" link type="primary" @click="router.push(`/editor/${row.id}`)">
-              编辑
-            </el-button>
-            <el-button
-              v-if="row.status !== 'PUBLISHED'"
-              size="small"
-              link
-              type="success"
-              @click="onChangeStatus(row, 'PUBLISHED')"
-            >发布</el-button>
-            <el-button
-              v-if="row.status === 'PUBLISHED'"
-              size="small"
-              link
-              type="warning"
-              @click="onChangeStatus(row, 'OFFLINE')"
-            >下架</el-button>
-            <el-button size="small" link type="danger" @click="onDelete(row)">删除</el-button>
+            <!-- 回收站：恢复 / 彻底删除 -->
+            <template v-if="row.status === 'TRASH'">
+              <el-button size="small" link type="success" @click="onRestore(row)">恢复</el-button>
+              <el-button size="small" link type="danger" @click="onForceDelete(row)">彻底删除</el-button>
+            </template>
+            <template v-else>
+              <el-button size="small" link type="primary" @click="router.push(`/editor/${row.id}`)">
+                编辑
+              </el-button>
+              <el-button
+                v-if="row.status !== 'PUBLISHED'"
+                size="small"
+                link
+                type="success"
+                @click="onChangeStatus(row, 'PUBLISHED')"
+              >发布</el-button>
+              <el-button
+                v-if="row.status === 'PUBLISHED'"
+                size="small"
+                link
+                type="warning"
+                @click="onChangeStatus(row, 'OFFLINE')"
+              >下架</el-button>
+              <el-button size="small" link type="danger" @click="onDelete(row)">删除</el-button>
+            </template>
           </template>
         </el-table-column>
         <template #empty>

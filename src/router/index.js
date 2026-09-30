@@ -40,7 +40,8 @@ const routes = [
       { path: 'comments', name: 'admin-comments', component: () => import('../views/admin/AdminComments.vue'), meta: { roles: ['ADMIN'] } },
       { path: 'sensitive-words', name: 'admin-sensitive-words', component: () => import('../views/admin/AdminSensitiveWords.vue'), meta: { roles: ['ADMIN'] } },
       { path: 'taxonomy', name: 'admin-taxonomy', component: () => import('../views/admin/AdminTaxonomy.vue'), meta: { roles: ['ADMIN'] } },
-      { path: 'users', name: 'admin-users', component: () => import('../views/admin/AdminUsers.vue'), meta: { roles: ['ADMIN'] } }
+      { path: 'users', name: 'admin-users', component: () => import('../views/admin/AdminUsers.vue'), meta: { roles: ['ADMIN'] } },
+      { path: 'site', name: 'admin-site', component: () => import('../views/admin/AdminSite.vue'), meta: { roles: ['ADMIN'] } }
     ]
   },
   { path: '/:pathMatch(.*)*', redirect: '/' }

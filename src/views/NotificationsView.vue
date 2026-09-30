@@ -58,13 +58,15 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { pageNotifications, markRead, markAllRead } from '../api/notification'
 import { resolveUploadUrl } from '../api/upload'
+import { useRealtimeStore } from '../stores/realtime'
 
 const router = useRouter()
+const realtime = useRealtimeStore()
 
 const typeTabs = [
   { label: '全部', value: '' },

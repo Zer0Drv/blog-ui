@@ -64,6 +64,19 @@
         </el-form-item>
       </el-form>
     </el-card>
+
+    <!-- 通知偏好卡片 -->
+    <el-card class="settings-card">
+      <template #header>
+        <span class="card-title">通知偏好</span>
+      </template>
+      <el-form label-width="80px">
+        <el-form-item label="邮件通知">
+          <el-switch v-model="emailNotifyEnabled" :loading="prefLoading" @change="onToggleEmailNotify" />
+          <span class="pref-tip">开启后，新的通知将同步发送到你的邮箱</span>
+        </el-form-item>
+      </el-form>
+    </el-card>
   </div>
 </template>
 
@@ -210,5 +223,10 @@ async function onToggleEmailNotify(value) {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+.pref-tip {
+  margin-left: 12px;
+  font-size: 13px;
+  color: #909399;
 }
 </style>

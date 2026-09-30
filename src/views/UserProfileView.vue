@@ -95,7 +95,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getUserProfile, follow, unfollow, pageUserArticles, listFollowers, listFollowing } from '../api/social'
@@ -170,6 +170,38 @@ async function toggleFollow() {
   } catch { /* 拦截器已提示 */ } finally {
     following.value = false
   }
+}
+
+// 粉丝/关注列表弹窗
+const followDialog = reactive({ visible: false, type: 'followers', list: [], page: 1, size: 10, total: 0, loading: false })
+
+function openFollowList(type) {
+  followDialog.type = type
+  followDialog.page = 1
+  followDialog.visible = true
+  loadFollowList()
+}
+
+async function loadFollowList() {
+  followDialog.loading = true
+  try {
+    const fetch = followDialog.type === 'followers' ? listFollowers : listFollowing
+    const data = await fetch(userId.value, followDialog.page, followDialog.size)
+    followDialog.list = data.records || []
+    followDialog.total = Number(data.total) || 0
+  } catch { /* 拦截器已提示 */ } finally {
+    followDialog.loading = false
+  }
+}
+
+// 发私信：跳到私信页并带上 peerId，由 MessagesView 打开/新建会话
+function onSendMessage() {
+  if (!auth.isLoggedIn) {
+    ElMessage.info('请先登录')
+    router.push('/login')
+    return
+  }
+  router.push(`/messages?peerId=${userId.value}`)
 }
 
 async function init() {

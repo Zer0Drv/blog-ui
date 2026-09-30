@@ -61,23 +61,35 @@
         <el-table-column label="时间" width="160">
           <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
-            <el-button
-              v-if="row.status !== 'FOLDED'"
-              size="small"
-              link
-              type="warning"
-              @click="onFold(row)"
-            >折叠</el-button>
-            <el-button
-              v-else
-              size="small"
-              link
-              type="success"
-              @click="onUnfold(row)"
-            >恢复</el-button>
-            <el-button size="small" link type="danger" @click="onDelete(row)">删除</el-button>
+            <!-- 待审核：通过 / 拒绝 -->
+            <template v-if="row.status === 'PENDING'">
+              <el-button size="small" link type="success" @click="onApprove(row)">通过</el-button>
+              <el-button size="small" link type="danger" @click="onReject(row)">拒绝</el-button>
+            </template>
+            <!-- 回收站：恢复 / 彻底删除 -->
+            <template v-else-if="row.status === 'TRASH' || status === 'TRASH'">
+              <el-button size="small" link type="success" @click="onRestore(row)">恢复</el-button>
+              <el-button size="small" link type="danger" @click="onForceDelete(row)">彻底删除</el-button>
+            </template>
+            <template v-else>
+              <el-button
+                v-if="row.status !== 'FOLDED'"
+                size="small"
+                link
+                type="warning"
+                @click="onFold(row)"
+              >折叠</el-button>
+              <el-button
+                v-else
+                size="small"
+                link
+                type="success"
+                @click="onUnfold(row)"
+              >恢复</el-button>
+              <el-button size="small" link type="danger" @click="onDelete(row)">删除</el-button>
+            </template>
           </template>
         </el-table-column>
         <template #empty>
@@ -106,9 +118,13 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
+  approveComment,
   deleteAdminComment,
   foldComment,
+  forceDeleteComment,
   pageAdminComments,
+  rejectComment,
+  restoreComment,
   unfoldComment
 } from '../../api/admin'
 

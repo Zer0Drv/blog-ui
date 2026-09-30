@@ -87,6 +87,9 @@ import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
+import http from '../api/http'
+import { CAPTCHA_REQUIRED_CODE } from '../api/captcha'
+import CaptchaInput from '../components/CaptchaInput.vue'
 
 const router = useRouter()
 const route = useRoute()

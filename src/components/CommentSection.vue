@@ -197,7 +197,9 @@ import { Pointer } from '@element-plus/icons-vue'
 import { listComments, listReplies, createComment, deleteComment } from '../api/comment'
 import { likeComment, unlikeComment } from '../api/interaction'
 import { resolveUploadUrl } from '../api/upload'
+import { CAPTCHA_REQUIRED_CODE } from '../api/captcha'
 import { useAuthStore } from '../stores/auth'
+import CaptchaInput from './CaptchaInput.vue'
 import { notifyCommentResult } from './comment-notify'
 
 const props = defineProps({
@@ -225,9 +227,27 @@ const replySize = 10
 // 已展开的主评论：rootId -> {list, page, total}
 const expanded = reactive({})
 
-// 评论限流（CAPTCHA_REQUIRED）后才显示的图形验证码
+// 评论限流（CAPTCHA_REQUIRED）后才显示的图形验证码，正常使用零打扰
 const commentCaptcha = reactive({ visible: false, value: { captchaId: '', captchaCode: '' } })
 const commentCaptchaRef = ref()
+
+// 验证码可见时把 captchaId/captchaCode 并入请求体
+function captchaPayload() {
+  return commentCaptcha.visible
+    ? { captchaId: commentCaptcha.value.captchaId, captchaCode: commentCaptcha.value.captchaCode }
+    : {}
+}
+
+// 显示验证码；已显示（再次触发）时换新图——验证码一次性，失败即作废
+function showCaptcha() {
+  if (commentCaptcha.visible) commentCaptchaRef.value?.refresh()
+  commentCaptcha.visible = true
+}
+
+function clearCaptcha() {
+  commentCaptcha.visible = false
+  commentCaptcha.value = { captchaId: '', captchaCode: '' }
+}
 
 function avatarUrl(user) {
   return user?.avatar ? resolveUploadUrl(user.avatar) : ''
@@ -310,15 +330,23 @@ async function submitRoot() {
   }
   submitting.value = true
   try {
-    const res = await createComment({ articleId: Number(props.articleId), content: newContent.value.trim() })
+    const res = await createComment({
+      articleId: Number(props.articleId),
+      content: newContent.value.trim(),
+      ...captchaPayload()
+    })
     const visible = notifyCommentResult(res, '评论成功')
     newContent.value = ''
+    clearCaptcha()
     if (visible) {
       emit('change', 1)
       page.value = 1
       await load()
     }
-  } catch { /* 拦截器已提示 */ } finally {
+  } catch (err) {
+    // 触发限流：亮出验证码（再次触发换新图），其余错误拦截器已提示
+    if (err?.code === CAPTCHA_REQUIRED_CODE) showCaptcha()
+  } finally {
     submitting.value = false
   }
 }

@@ -26,6 +26,7 @@
               >
                 <el-button :loading="coverUploading">{{ form.cover ? '更换封面' : '上传封面' }}</el-button>
               </el-upload>
+              <el-button @click="pickerVisible = true">从附件库选择</el-button>
               <el-button v-if="form.cover" link type="danger" @click="form.cover = ''">移除</el-button>
             </div>
           </el-form-item>
