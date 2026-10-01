@@ -38,14 +38,16 @@
         </div>
         <img v-if="article.cover" :src="resolveUploadUrl(article.cover)" class="cover" alt="cover" />
         <el-divider />
+        <!-- 渲染前统一 DOMPurify 消毒（#9 存储型 XSS 防护） -->
         <MdPreview
           v-if="article.editorType === 'MARKDOWN'"
           :model-value="article.content || ''"
           :editor-id="previewId"
+          :sanitize="sanitizeHtml"
           @on-get-catalog="onGetCatalog"
         />
-        <!-- 后端文章内容由作者本人产生；RICHTEXT 模式按契约直接渲染 HTML -->
-        <div v-else ref="richtextRef" class="richtext" v-html="article.content" />
+        <!-- RICHTEXT 模式渲染消毒后的 HTML（<script>/on* 事件等已被移除） -->
+        <div v-else ref="richtextRef" class="richtext" v-html="sanitizedContent" />
 
         <!-- M3 互动栏：浏览量/点赞/收藏/评论数 -->
         <div class="interaction-bar">
@@ -118,6 +120,7 @@ import { getArticle } from '../api/article'
 import { likeArticle, unlikeArticle, favoriteArticle, unfavoriteArticle } from '../api/interaction'
 import { follow, unfollow, getUserProfile } from '../api/social'
 import { resolveUploadUrl } from '../api/upload'
+import { sanitizeHtml } from '../utils/sanitize'
 import { useAuthStore } from '../stores/auth'
 import CommentSection from '../components/CommentSection.vue'
 
@@ -128,6 +131,9 @@ const auth = useAuthStore()
 const article = ref(null)
 const loading = ref(true)
 const previewId = `preview-${route.params.id}`
+
+// #9：RICHTEXT 正文渲染前经 DOMPurify 消毒，杜绝 <img onerror> / <script> 等存储型 XSS
+const sanitizedContent = computed(() => sanitizeHtml(article.value?.content || ''))
 
 const canManage = computed(() => {
   if (!auth.user || !article.value) return false
