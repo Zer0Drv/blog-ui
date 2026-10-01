@@ -171,13 +171,13 @@ function onGithubLogin() {
 async function onLogin() {
   loading.value = true
   try {
-    // store 未提供带 captcha 的登录：直调 http，成功后按 auth.login 的既有逻辑落 token/user
-    const data = await http.post('/auth/login', {
+    // 直调 http 以支持 captcha；后端校验通过后 Set-Cookie（AUTH_TOKEN, HttpOnly），
+    // 前端不持有 token，只需拉取 /auth/me 建立会话（#13）
+    await http.post('/auth/login', {
       username: loginForm.username,
       password: loginForm.password,
       ...captchaPayload(loginCaptcha)
     })
-    auth.setToken(data.access_token)
     await auth.fetchMe()
     clearCaptcha(loginCaptcha)
     ElMessage.success('登录成功')
@@ -267,8 +267,8 @@ async function onResetPassword() {
 .login-wrap {
   min-height: 100vh;
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   background: #f5f7fa;
 }
 .login-card {
