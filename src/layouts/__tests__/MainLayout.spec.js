@@ -22,7 +22,7 @@ function mountLayout() {
   const pinia = createPinia()
   setActivePinia(pinia)
   const auth = useAuthStore()
-  auth.token = 'test-token'
+  // Cookie 会话（#13）：登录态由 user 判定
   auth.user = { username: 'tester', nickname: '测试', role: 'USER' }
   const wrapper = mount(MainLayout, {
     global: {

@@ -2,25 +2,25 @@ import { defineStore } from 'pinia'
 import http from '../api/http'
 import { useRealtimeStore } from './realtime'
 
+// 登录态基于后端 HttpOnly Cookie（AUTH_TOKEN，#13）：前端不持有 token，
+// 通过 GET /auth/me 探测（200=已登录，401=未登录）
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    token: localStorage.getItem('token') || '',
-    user: null
+    user: null,
+    // 会话探测是否已执行（路由守卫首次导航时经 /auth/me 恢复会话）
+    sessionChecked: false
   }),
   getters: {
-    isLoggedIn: s => !!s.token
+    isLoggedIn: s => !!s.user
   },
   actions: {
     async login(username, password) {
-      const data = await http.post('/auth/login', { username, password })
-      this.token = data.access_token
-      localStorage.setItem('token', this.token)
+      // 后端校验通过后 Set-Cookie: AUTH_TOKEN（HttpOnly），响应体不再含 token
+      await http.post('/auth/login', { username, password })
       await this.fetchMe()
     },
     async register(form) {
-      const data = await http.post('/auth/register', form)
-      this.token = data.access_token
-      localStorage.setItem('token', this.token)
+      await http.post('/auth/register', form)
       await this.fetchMe()
     },
     async sendEmailCode(email) {
@@ -34,22 +34,32 @@ export const useAuthStore = defineStore('auth', {
     async resetPassword(form) {
       await http.post('/auth/password-reset', form)
     },
-    // OAuth 回调直接写入已签发的 token（GitHub 登录回跳 /oauth/callback?token=...）
-    setToken(token) {
-      this.token = token
-      localStorage.setItem('token', token)
+    // GitHub OAuth 回跳：一次性 code 换 Cookie 会话（POST /auth/oauth/exchange）
+    async exchangeOAuthCode(code) {
+      await http.post('/auth/oauth/exchange', { code })
+      await this.fetchMe()
     },
     async fetchMe() {
       this.user = await http.get('/auth/me')
       // 已登录态恢复（刷新页面/OAuth 回跳等）成功后建立 WS（幂等）
       useRealtimeStore().connect()
     },
+    // 应用启动/路由守卫首次导航时恢复会话；幂等，401 视为未登录
+    async ensureSession() {
+      if (this.sessionChecked) return
+      this.sessionChecked = true
+      try {
+        await this.fetchMe()
+      } catch {
+        this.user = null
+      }
+    },
     async logout() {
       useRealtimeStore().disconnect()
-      try { await http.post('/auth/logout') } catch { /* token 已失效也允许本地登出 */ }
-      this.token = ''
+      // 后端清 Cookie + 拉黑 token；后端报错（如 cookie 已失效）也允许本地登出
+      try { await http.post('/auth/logout') } catch { /* 本地登出兜底 */ }
       this.user = null
-      localStorage.removeItem('token')
+      this.sessionChecked = true
     }
   }
 })

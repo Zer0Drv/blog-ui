@@ -25,7 +25,7 @@
       </template>
     </el-table>
 
-    <!-- 版本内容只读预览 -->
+    <!-- 版本内容只读预览（#9：渲染前统一 DOMPurify 消毒） -->
     <el-dialog
       v-model="previewVisible"
       :title="`版本 v${preview?.version || ''} 预览`"
@@ -38,8 +38,9 @@
             v-if="preview.editorType === 'MARKDOWN'"
             :editor-id="previewId"
             :model-value="preview.content || ''"
+            :sanitize="sanitizeHtml"
           />
-          <div v-else class="rich-preview" v-html="preview.content || ''"></div>
+          <div v-else class="rich-preview" v-html="sanitizedPreview"></div>
         </template>
       </div>
     </el-dialog>
@@ -47,11 +48,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MdPreview } from 'md-editor-v3'
 import 'md-editor-v3/lib/preview.css'
 import { getArticleVersion, listArticleVersions, restoreArticleVersion } from '../api/article'
+import { sanitizeHtml } from '../utils/sanitize'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -65,6 +67,9 @@ const previewVisible = ref(false)
 const previewLoading = ref(false)
 const preview = ref(null)
 const previewId = `version-preview-${props.articleId}`
+
+// #9：历史快照同样可能包含恶意 HTML，预览前消毒
+const sanitizedPreview = computed(() => sanitizeHtml(preview.value?.content || ''))
 
 async function load() {
   loading.value = true

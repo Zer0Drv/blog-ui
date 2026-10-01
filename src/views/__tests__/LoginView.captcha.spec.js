@@ -83,9 +83,8 @@ describe('LoginView 验证码链路（CAPTCHA_REQUIRED）', () => {
     expect(wrapper.find('.captcha-input').exists()).toBe(false)
   })
 
-  it('带验证码重试：请求体并入 captchaId/captchaCode，成功后隐藏清空', async () => {
+  it('带验证码重试：请求体并入 captchaId/captchaCode，成功后拉取会话并隐藏清空', async () => {
     const { wrapper, auth } = mountView()
-    auth.setToken = vi.fn()
     auth.fetchMe = vi.fn().mockResolvedValue(undefined)
     http.post.mockRejectedValueOnce(captchaError())
 
@@ -94,7 +93,8 @@ describe('LoginView 验证码链路（CAPTCHA_REQUIRED）', () => {
     await flushPromises()
     expect(wrapper.find('.captcha-input').exists()).toBe(true)
 
-    http.post.mockResolvedValueOnce({ access_token: 'tok-1' })
+    // 登录成功：后端 Set-Cookie（AUTH_TOKEN），前端只拉 /auth/me 建会话（#13）
+    http.post.mockResolvedValueOnce({})
     await loginButton(wrapper).trigger('click')
     await flushPromises()
 
@@ -104,7 +104,7 @@ describe('LoginView 验证码链路（CAPTCHA_REQUIRED）', () => {
       captchaId: 'cid-1',
       captchaCode: ''
     })
-    expect(auth.setToken).toHaveBeenCalledWith('tok-1')
+    expect(auth.fetchMe).toHaveBeenCalled()
     expect(wrapper.find('.captcha-input').exists()).toBe(false)
   })
 })

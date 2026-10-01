@@ -80,13 +80,14 @@ describe('UserProfileView 粉丝/关注弹窗与发私信', () => {
     expect(listFollowing).toHaveBeenCalledWith('2', 1, 10)
     const dialog = document.body.querySelector('.el-dialog')
     expect(dialog).toBeTruthy()
+    expect(dialog.textContent).toContain('关注')
     expect(dialog.textContent).toContain('Cat')
     wrapper.unmount()
   })
 
   it('点击「发私信」跳转 /messages?peerId=<userId>', async () => {
     const { wrapper, auth } = mountView()
-    auth.token = 'tok' // isLoggedIn
+    auth.user = { id: 1, username: 'me' } // isLoggedIn（Cookie 会话由 user 判定，#13）
     await flushPromises()
 
     const sendBtn = wrapper.findAll('button').find(b => b.text() === '发私信')

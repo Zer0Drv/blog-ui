@@ -3,7 +3,8 @@ import { defineStore } from 'pinia'
 
 // WebSocket 实时通道：私信（private_message）+ 通知（notification）推送
 // 断线指数退避重连（1s→2s→4s→8s→16s，上限 5 次）；WS 不可用时各页面轮询兜底
-// 注意：本 store 不 import auth store（防循环依赖），token 直接读 localStorage
+// 鉴权：同源 Cookie（AUTH_TOKEN）由浏览器握手时自动携带，URL 不再传 token（#13）
+// 注意：本 store 不 import auth store（防循环依赖），仅在已登录（fetchMe 成功）后被调用
 export const useRealtimeStore = defineStore('realtime', () => {
   const connected = ref(false)
 
@@ -30,15 +31,14 @@ export const useRealtimeStore = defineStore('realtime', () => {
   }
 
   function connect() {
-    const token = localStorage.getItem('token')
-    if (!token) return
     // 已连接/连接中不重复连
     if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return
     clearTimeout(reconnectTimer)
     reconnectTimer = null
     manualClose = false
-    // 同源：http(s)://host -> ws(s)://host，开发环境经 vite 代理转发到后端
-    const url = location.origin.replace(/^http/, 'ws') + `/ws?token=${encodeURIComponent(token)}`
+    // 同源：http(s)://host -> ws(s)://host，开发环境经 vite 代理转发到后端；
+    // 浏览器握手自动携带同源 Cookie 完成鉴权，不再拼 ?token=（#13）
+    const url = location.origin.replace(/^http/, 'ws') + '/ws'
     let socket
     try {
       socket = new WebSocket(url)

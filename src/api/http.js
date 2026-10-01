@@ -2,12 +2,13 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
 // 后端统一响应 R<T>{code,data,message}：code!=='200' 按业务错误 reject
-const http = axios.create({ baseURL: '/api', timeout: 15000 })
-
-http.interceptors.request.use(config => {
-  const token = localStorage.getItem('token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
-  return config
+// 认证已改为 HttpOnly Cookie（AUTH_TOKEN，#13）：withCredentials 让浏览器自动携带，
+// 前端不再持有/拼接 token；X-Requested-With 供后端识别 XHR 请求（配合 CSRF 防护）
+const http = axios.create({
+  baseURL: '/api',
+  timeout: 15000,
+  withCredentials: true,
+  headers: { 'X-Requested-With': 'XMLHttpRequest' }
 })
 
 http.interceptors.response.use(
@@ -26,10 +27,14 @@ http.interceptors.response.use(
   },
   err => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('token')
-      if (location.pathname !== '/login') location.href = '/login'
+      // Cookie 会话失效（过期/被踢）统一跳登录页；
+      // /auth/me 用于登录态探测，401 属预期结果，不跳转、不提示
+      const isSessionProbe = /\/auth\/me$/.test(err.config?.url || '')
+      if (!isSessionProbe && location.pathname !== '/login') location.href = '/login'
     }
-    ElMessage.error(err.response?.data?.message || err.message || '网络错误')
+    if (err.response?.status !== 401 || !/\/auth\/me$/.test(err.config?.url || '')) {
+      ElMessage.error(err.response?.data?.message || err.message || '网络错误')
+    }
     // HTTP 层错误：同样透传后端 code（限流/参数错误等也走 HTTP 状态码时可用）
     err.code = err.response?.data?.code
     return Promise.reject(err)

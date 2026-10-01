@@ -58,28 +58,26 @@ describe('realtime store', () => {
     return FakeWebSocket.instances[FakeWebSocket.instances.length - 1]
   }
 
-  it('connect 用 localStorage token 建连，open 后 connected=true', () => {
-    localStorage.setItem('token', 'jwt-abc')
+  it('connect 建连（同源 Cookie 鉴权），open 后 connected=true', () => {
     const realtime = useRealtimeStore()
 
     realtime.connect()
 
     expect(FakeWebSocket.instances).toHaveLength(1)
-    expect(lastSocket().url).toBe(`${location.origin.replace(/^http/, 'ws')}/ws?token=jwt-abc`)
+    expect(lastSocket().url).toBe(`${location.origin.replace(/^http/, 'ws')}/ws`)
     expect(realtime.connected).toBe(false)
 
     lastSocket().open()
     expect(realtime.connected).toBe(true)
   })
 
-  it('无 token 时不建连', () => {
+  it('WS URL 不携带 token query（#13）', () => {
     const realtime = useRealtimeStore()
     realtime.connect()
-    expect(FakeWebSocket.instances).toHaveLength(0)
+    expect(lastSocket().url).not.toContain('token=')
   })
 
   it('已连接/连接中不重复建连', () => {
-    localStorage.setItem('token', 't')
     const realtime = useRealtimeStore()
 
     realtime.connect()
@@ -91,7 +89,6 @@ describe('realtime store', () => {
   })
 
   it('onmessage 按 type 分发给订阅者，off 后不再收到', () => {
-    localStorage.setItem('token', 't')
     const realtime = useRealtimeStore()
     realtime.connect()
     lastSocket().open()
@@ -117,7 +114,6 @@ describe('realtime store', () => {
   })
 
   it('单个订阅者抛异常不影响其他订阅者', () => {
-    localStorage.setItem('token', 't')
     const realtime = useRealtimeStore()
     realtime.connect()
     lastSocket().open()
@@ -134,7 +130,6 @@ describe('realtime store', () => {
 
   it('断线后指数退避重连（1s→2s→4s→8s→16s，上限 5 次）', () => {
     vi.useFakeTimers()
-    localStorage.setItem('token', 't')
     const realtime = useRealtimeStore()
     realtime.connect()
     lastSocket().open()
@@ -173,7 +168,6 @@ describe('realtime store', () => {
 
   it('重连成功后重置退避计数', () => {
     vi.useFakeTimers()
-    localStorage.setItem('token', 't')
     const realtime = useRealtimeStore()
     realtime.connect()
     lastSocket().open()
@@ -194,7 +188,6 @@ describe('realtime store', () => {
 
   it('disconnect 主动关闭不重连，并清掉待执行的重连定时器', () => {
     vi.useFakeTimers()
-    localStorage.setItem('token', 't')
     const realtime = useRealtimeStore()
     realtime.connect()
     lastSocket().open()
