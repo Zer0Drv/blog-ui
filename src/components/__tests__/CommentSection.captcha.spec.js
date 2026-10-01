@@ -40,7 +40,7 @@ function mountSection() {
   const pinia = createPinia()
   setActivePinia(pinia)
   const auth = useAuthStore()
-  auth.token = 'tok'
+  // Cookie 会话（#13）：登录态由 user 判定
   auth.user = { id: 1, username: 'me', role: 'USER' }
   const wrapper = mount(CommentSection, {
     props: { articleId: 10 },
