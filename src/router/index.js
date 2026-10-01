@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/auth'
 
 const routes = [
   { path: '/login', name: 'login', component: () => import('../views/LoginView.vue'), meta: { public: true } },
-  // GitHub OAuth 回跳（后端 302 带 token）
+  // GitHub OAuth 回跳（后端 302 带一次性 code，前端换取 Cookie 会话）
   { path: '/oauth/callback', name: 'oauth-callback', component: () => import('../views/OAuthCallbackView.vue'), meta: { public: true } },
   {
     path: '/',
@@ -53,24 +53,17 @@ const router = createRouter({
 })
 
 router.beforeEach(async to => {
-  const token = localStorage.getItem('token')
-  if (to.name === 'login' && token) return { name: 'home' }
-  if (to.meta.public) return true
-  if (!token) return { name: 'login' }
+  const auth = useAuthStore()
+  // Cookie 会话：无本地 token 可判，首次导航经 GET /auth/me 恢复登录态（ensureSession 幂等）
+  await auth.ensureSession()
 
-  if (to.meta.roles) {
-    const auth = useAuthStore()
-    if (!auth.user) {
-      try {
-        await auth.fetchMe()
-      } catch {
-        return { name: 'login' }
-      }
-    }
-    if (!to.meta.roles.includes(auth.user?.role)) {
-      ElMessage.warning('无权限访问该页面')
-      return { name: 'home' }
-    }
+  if (to.name === 'login' && auth.isLoggedIn) return { name: 'home' }
+  if (to.meta.public) return true
+  if (!auth.isLoggedIn) return { name: 'login' }
+
+  if (to.meta.roles && !to.meta.roles.includes(auth.user?.role)) {
+    ElMessage.warning('无权限访问该页面')
+    return { name: 'home' }
   }
   return true
 })
