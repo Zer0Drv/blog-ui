@@ -52,7 +52,7 @@
                     :size="32"
                     :src="resolveUploadUrl(activePeer.avatar) || undefined"
                     class="msg-avatar"
-                  >{{ (activePeer.nickname || activePeer.username || '?')[0] }}</el-avatar>
+                    >{{ (activePeer.nickname || activePeer.username || '?')[0] }}</el-avatar>
                   <div class="msg-bubble">
                     <div class="msg-content">{{ m.content }}</div>
                     <div class="msg-time">{{ formatTime(m.createTime) }}</div>
@@ -94,6 +94,7 @@ import { getUserProfile } from '../api/social'
 import { resolveUploadUrl } from '../api/upload'
 import { useAuthStore } from '../stores/auth'
 import { useRealtimeStore } from '../stores/realtime'
+import { onProfileUpdated } from '../utils/profileSync'
 
 const auth = useAuthStore()
 const realtime = useRealtimeStore()
@@ -269,6 +270,9 @@ async function openPeerFromQuery() {
   } catch { /* 用户不存在等，拦截器已提示 */ }
 }
 
+// 资料变更（头像/昵称等）时刷新会话列表，会话头像即时更新
+const offProfileUpdated = onProfileUpdated(loadConversations)
+
 onMounted(async () => {
   realtime.on('private_message', onRealtimeMessage)
   if (!auth.user) {
@@ -287,6 +291,7 @@ onMounted(async () => {
 onUnmounted(() => {
   realtime.off('private_message', onRealtimeMessage)
   stopPolling()
+  offProfileUpdated()
 })
 </script>
 
