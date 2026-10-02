@@ -5,6 +5,7 @@ import ElementPlus from 'element-plus'
 import MessagesView from '../MessagesView.vue'
 import { useAuthStore } from '../../stores/auth'
 import { listConversations, pageMessages, markConversationRead } from '../../api/message'
+import { notifyUnreadChanged } from '../../utils/unreadSync'
 
 // 捕获 realtime.on 注册的回调，用于模拟 WS 推送
 const listeners = vi.hoisted(() => ({}))
@@ -33,6 +34,7 @@ vi.mock('../../api/message', () => ({
 
 vi.mock('../../api/social', () => ({ getUserProfile: vi.fn() }))
 vi.mock('../../api/upload', () => ({ resolveUploadUrl: v => v }))
+vi.mock('../../utils/unreadSync', () => ({ notifyUnreadChanged: vi.fn() }))
 
 function msg(id, senderId = 2) {
   return { id, senderId, receiverId: 1, content: `msg-${id}`, createTime: '2024-01-01T00:00:00' }
@@ -121,6 +123,29 @@ describe('MessagesView 实时推送与轮询兜底', () => {
 
     expect(listeners.private_message).toBeUndefined()
   })
+
+  it('进入会话标记已读成功后广播 unread-changed（导航栏即时刷新徽标）', async () => {
+    const { wrapper } = mountView()
+    await flushPromises()
+
+    // 挂载后自动选中首个会话并标记已读
+    expect(markConversationRead).toHaveBeenCalledWith(2)
+    expect(notifyUnreadChanged).toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('收到当前会话实时私信并标记已读成功后广播 unread-changed', async () => {
+    const { wrapper } = mountView()
+    await flushPromises()
+    notifyUnreadChanged.mockClear()
+
+    listeners.private_message({ id: 99, senderId: 2, content: '在吗' })
+    await flushPromises()
+
+    expect(markConversationRead).toHaveBeenCalledWith(2)
+    expect(notifyUnreadChanged).toHaveBeenCalled()
+    wrapper.unmount()
+  })
 })
 
 describe('MessagesView 加载更早的消息', () => {
@@ -165,7 +190,6 @@ describe('MessagesView 加载更早的消息', () => {
 
     await wrapper.find('.load-more button').trigger('click')
     await flushPromises()
-
     expect(wrapper.find('.load-more').exists()).toBe(false)
     wrapper.unmount()
   })
