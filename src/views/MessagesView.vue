@@ -95,6 +95,7 @@ import { resolveUploadUrl } from '../api/upload'
 import { useAuthStore } from '../stores/auth'
 import { useRealtimeStore } from '../stores/realtime'
 import { onProfileUpdated } from '../utils/profileSync'
+import { notifyUnreadChanged } from '../utils/unreadSync'
 
 const auth = useAuthStore()
 const realtime = useRealtimeStore()
@@ -185,6 +186,7 @@ async function selectConversation(peer) {
     .then(() => {
       const c = conversations.value.find(x => x.peer?.id === peer.id)
       if (c) c.unreadCount = 0
+      notifyUnreadChanged() // 通知导航栏立即刷新未读徽标
     })
     .catch(() => {})
 }
@@ -212,6 +214,7 @@ function markActiveRead() {
     .then(() => {
       const c = conversations.value.find(x => x.peer?.id === peerId)
       if (c) c.unreadCount = 0
+      notifyUnreadChanged() // 通知导航栏立即刷新未读徽标
     })
     .catch(() => {})
 }
