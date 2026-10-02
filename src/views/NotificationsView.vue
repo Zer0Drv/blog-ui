@@ -65,6 +65,7 @@ import { pageNotifications, markRead, markAllRead } from '../api/notification'
 import { resolveUploadUrl } from '../api/upload'
 import { useRealtimeStore } from '../stores/realtime'
 import { onProfileUpdated } from '../utils/profileSync'
+import { notifyUnreadChanged } from '../utils/unreadSync'
 
 const router = useRouter()
 const realtime = useRealtimeStore()
@@ -124,6 +125,7 @@ async function onClick(n) {
     try {
       await markRead(n.id)
       n.readFlag = 1
+      notifyUnreadChanged() // 通知导航栏立即刷新未读徽标
     } catch { /* 拦截器已提示 */ }
   }
   if (n.type === 'PRIVATE_MESSAGE') {
@@ -141,6 +143,7 @@ async function onMarkAllRead() {
   try {
     await markAllRead()
     items.value.forEach(n => { n.readFlag = 1 })
+    notifyUnreadChanged() // 通知导航栏立即刷新未读徽标
     ElMessage.success('已全部标记为已读')
   } catch { /* 拦截器已提示 */ } finally {
     markingAll.value = false
