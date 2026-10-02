@@ -5,6 +5,7 @@ import ElementPlus from 'element-plus'
 import UserProfileView from '../UserProfileView.vue'
 import { useAuthStore } from '../../stores/auth'
 import { getUserProfile, pageUserArticles, listFollowers, listFollowing } from '../../api/social'
+import { notifyProfileUpdated } from '../../utils/profileSync'
 
 const routerPush = vi.hoisted(() => vi.fn())
 
@@ -106,5 +107,26 @@ describe('UserProfileView 粉丝/关注弹窗与发私信', () => {
 
     expect(routerPush).toHaveBeenCalledWith('/login')
     wrapper.unmount()
+  })
+
+  it('收到资料变更事件后重新拉取当前页 profile（头像即时刷新）', async () => {
+    const { wrapper } = mountView()
+    await flushPromises()
+    expect(getUserProfile).toHaveBeenCalledTimes(1)
+
+    notifyProfileUpdated()
+    await flushPromises()
+    expect(getUserProfile).toHaveBeenCalledTimes(2)
+    wrapper.unmount()
+  })
+
+  it('组件卸载后不再响应资料变更事件', async () => {
+    const { wrapper } = mountView()
+    await flushPromises()
+    wrapper.unmount()
+
+    notifyProfileUpdated()
+    await flushPromises()
+    expect(getUserProfile).toHaveBeenCalledTimes(1)
   })
 })

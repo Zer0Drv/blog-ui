@@ -95,12 +95,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getUserProfile, follow, unfollow, pageUserArticles, listFollowers, listFollowing } from '../api/social'
 import { resolveUploadUrl } from '../api/upload'
 import { useAuthStore } from '../stores/auth'
+import { onProfileUpdated } from '../utils/profileSync'
 
 const route = useRoute()
 const router = useRouter()
@@ -216,6 +217,10 @@ async function init() {
 // 同一组件复用时（/users/:id 间切换）重新加载
 watch(userId, init)
 onMounted(init)
+
+// 资料变更（头像/昵称等）时重新拉取当前页 profile，保证头像即时刷新
+const offProfileUpdated = onProfileUpdated(loadProfile)
+onUnmounted(offProfileUpdated)
 </script>
 
 <style scoped>
