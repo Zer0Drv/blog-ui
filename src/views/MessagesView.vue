@@ -52,7 +52,7 @@
                     :size="32"
                     :src="resolveUploadUrl(activePeer.avatar) || undefined"
                     class="msg-avatar"
-                    >{{ (activePeer.nickname || activePeer.username || '?')[0] }}</el-avatar>
+                  >{{ (activePeer.nickname || activePeer.username || '?')[0] }}</el-avatar>
                   <div class="msg-bubble">
                     <div class="msg-content">{{ m.content }}</div>
                     <div class="msg-time">{{ formatTime(m.createTime) }}</div>
