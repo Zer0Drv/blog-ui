@@ -190,7 +190,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Pointer } from '@element-plus/icons-vue'
@@ -201,6 +201,7 @@ import { CAPTCHA_REQUIRED_CODE } from '../api/captcha'
 import { useAuthStore } from '../stores/auth'
 import CaptchaInput from './CaptchaInput.vue'
 import { notifyCommentResult } from './comment-notify'
+import { onProfileUpdated } from '../utils/profileSync'
 
 const props = defineProps({
   articleId: { type: [String, Number], required: true }
@@ -437,6 +438,14 @@ onMounted(async () => {
   }
   load()
 })
+
+// 资料变更（头像/昵称等）时重置到第一页重新拉取评论，评论区头像即时刷新
+const offProfileUpdated = onProfileUpdated(() => {
+  page.value = 1
+  Object.keys(expanded).forEach(k => delete expanded[k])
+  load()
+})
+onUnmounted(offProfileUpdated)
 </script>
 
 <style scoped>

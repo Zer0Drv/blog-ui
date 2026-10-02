@@ -87,6 +87,7 @@ import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
 import { updateMyProfile, changeMyPassword, getMyPreferences, updateMyPreferences } from '../api/user'
 import { uploadImage, resolveUploadUrl } from '../api/upload'
+import { notifyProfileUpdated } from '../utils/profileSync'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -125,6 +126,7 @@ async function onSaveProfile() {
       bio: profileForm.bio || ''
     })
     await auth.fetchMe()
+    notifyProfileUpdated()
     ElMessage.success('资料已保存')
   } catch { /* 拦截器已提示 */ } finally {
     profileSaving.value = false

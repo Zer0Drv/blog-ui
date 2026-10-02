@@ -64,6 +64,7 @@ import { ElMessage } from 'element-plus'
 import { pageNotifications, markRead, markAllRead } from '../api/notification'
 import { resolveUploadUrl } from '../api/upload'
 import { useRealtimeStore } from '../stores/realtime'
+import { onProfileUpdated } from '../utils/profileSync'
 
 const router = useRouter()
 const realtime = useRealtimeStore()
@@ -157,6 +158,9 @@ function onRealtimeNotification(n) {
   }
 }
 
+// 资料变更（头像/昵称等）时重新拉取通知列表，actor 头像即时刷新
+const offProfileUpdated = onProfileUpdated(load)
+
 onMounted(() => {
   realtime.on('notification', onRealtimeNotification)
   load()
@@ -164,6 +168,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   realtime.off('notification', onRealtimeNotification)
+  offProfileUpdated()
 })
 </script>
 
