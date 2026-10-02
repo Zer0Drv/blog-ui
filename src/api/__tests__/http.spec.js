@@ -64,4 +64,23 @@ describe('http 拦截器', () => {
     await expect(handlers.bad(err)).rejects.toBe(err)
     expect(err.code).toBeUndefined()
   })
+
+  it('blob 成功响应（responseType=blob）返回完整 resp 供读 Content-Disposition', () => {
+    const resp = { data: new Blob(['# x']), headers: { 'content-disposition': "attachment; filename*=UTF-8''a.md" }, config: { responseType: 'blob' } }
+    expect(handlers.ok(resp)).toBe(resp)
+  })
+
+  it('blob 错误体转 JSON 后按业务消息提示并透传 code', async () => {
+    const err = {
+      response: {
+        status: 400,
+        data: new Blob([JSON.stringify({ code: '40010', message: '文件大小不能超过 2MB' })], { type: 'application/json' })
+      },
+      message: 'Request failed with status code 400'
+    }
+    await expect(handlers.bad(err)).rejects.toBe(err)
+    expect(err.code).toBe('40010')
+    const { ElMessage } = await import('element-plus')
+    expect(ElMessage.error).toHaveBeenCalledWith('文件大小不能超过 2MB')
+  })
 })
