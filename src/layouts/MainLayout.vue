@@ -26,7 +26,7 @@
           <el-button v-if="canWrite" type="primary" @click="router.push('/editor/new')">
             写文章
           </el-button>
-          <!-- M4 通知铃铛：未读数 30s 轮询，页面隐藏暂停 -->
+          <!-- M4 通知铃铛：未读数 30s 轮询兜底，已读事件/WS 推送即时刷新，页面隐藏暂停 -->
           <el-badge
             :value="unreadCount"
             :hidden="!unreadCount"
@@ -82,12 +82,15 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowDown, Bell, Search } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
+import { useRealtimeStore } from '../stores/realtime'
 import { getUnreadCount } from '../api/notification'
 import { getSiteConfig } from '../api/site'
 import { resolveUploadUrl } from '../api/upload'
 import { onProfileUpdated } from '../utils/profileSync'
+import { onUnreadChanged } from '../utils/unreadSync'
 
 const auth = useAuthStore()
+const realtime = useRealtimeStore()
 const router = useRouter()
 
 const canWrite = computed(() => ['ADMIN', 'AUTHOR'].includes(auth.user?.role))
@@ -181,10 +184,23 @@ const offProfileUpdated = onProfileUpdated(() => {
   if (auth.isLoggedIn) auth.fetchMe().catch(() => {})
 })
 
+// 未读徽标即时刷新（不等 30s 轮询）：
+// 1) 本标签页/其他标签页标记已读后广播 unread-changed，立即重拉未读数
+// 2) WS 推送新通知/新私信时，未读数立即 +N
+const offUnreadChanged = onUnreadChanged(() => refreshUnread())
+
+onMounted(() => {
+  realtime.on('notification', refreshUnread)
+  realtime.on('private_message', refreshUnread)
+})
+
 onUnmounted(() => {
   stopPolling()
   document.removeEventListener('visibilitychange', onVisibilityChange)
   offProfileUpdated()
+  offUnreadChanged()
+  realtime.off('notification', refreshUnread)
+  realtime.off('private_message', refreshUnread)
 })
 
 async function onCommand(cmd) {
@@ -293,7 +309,7 @@ async function onCommand(cmd) {
 .footer-inner {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 16px 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
