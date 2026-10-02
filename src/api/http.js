@@ -11,8 +11,22 @@ const http = axios.create({
   headers: { 'X-Requested-With': 'XMLHttpRequest' }
 })
 
+// 读取 Blob 错误体为 JSON（FileReader 兼容浏览器与 jsdom，Blob.text 在 jsdom 缺失）
+function readBlobAsJson(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      try { resolve(JSON.parse(reader.result)) } catch (e) { reject(e) }
+    }
+    reader.onerror = () => reject(reader.error)
+    reader.readAsText(blob)
+  })
+}
+
 http.interceptors.response.use(
   resp => {
+    // 文件下载（blob）：返回完整响应，调用方需读 Content-Disposition 解析文件名
+    if (resp.config?.responseType === 'blob') return resp
     const body = resp.data
     if (body && typeof body === 'object' && 'code' in body) {
       // rawResponse：调用方需要完整 R 体（如读取 message 做敏感词审核提示）时跳过 data 剥离
@@ -25,7 +39,13 @@ http.interceptors.response.use(
     }
     return body
   },
-  err => {
+  async err => {
+    // 文件流（blob）错误体：后端统一错误也是 JSON，转出来读业务码/消息
+    if (err.response?.data instanceof Blob) {
+      try {
+        err.response.data = await readBlobAsJson(err.response.data)
+      } catch { /* 非 JSON 错误体，保持原样 */ }
+    }
     if (err.response?.status === 401) {
       // Cookie 会话失效（过期/被踢）统一跳登录页；
       // /auth/me 用于登录态探测，401 属预期结果，不跳转、不提示

@@ -16,7 +16,16 @@
               <el-option label="已发布" value="PUBLISHED" />
               <el-option label="已下架" value="OFFLINE" />
             </el-select>
+            <el-button :loading="importing" @click="triggerImport">导入文章</el-button>
             <el-button type="primary" @click="router.push('/editor/new')">写文章</el-button>
+            <!-- 导入：隐藏 file input，前端先校验扩展名与 2MB 大小 -->
+            <input
+              ref="importInput"
+              type="file"
+              accept=".md,.markdown,.txt,.html,.htm"
+              style="display: none"
+              @change="onImportFile"
+            />
           </div>
         </div>
       </template>
@@ -41,7 +50,7 @@
         <el-table-column label="更新时间" width="170">
           <template #default="{ row }">{{ formatTime(row.updateTime) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="230" fixed="right">
+        <el-table-column label="操作" width="270" fixed="right">
           <template #default="{ row }">
             <!-- 回收站：恢复 / 彻底删除 -->
             <template v-if="row.status === 'TRASH'">
@@ -66,6 +75,7 @@
                 type="warning"
                 @click="onChangeStatus(row, 'OFFLINE')"
               >下架</el-button>
+              <el-button size="small" link @click="onExport(row)">导出</el-button>
               <el-button size="small" link type="danger" @click="onDelete(row)">删除</el-button>
             </template>
           </template>
@@ -95,7 +105,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { deleteArticle, forceDeleteArticle, pageMyArticles, restoreArticle, updateArticleStatus } from '../api/article'
+import { deleteArticle, exportArticle, forceDeleteArticle, importArticle, pageMyArticles, restoreArticle, updateArticleStatus } from '../api/article'
 
 const router = useRouter()
 
@@ -188,6 +198,46 @@ async function onForceDelete(row) {
     ElMessage.success('已彻底删除')
     if (rows.value.length === 1 && page.value > 1) page.value -= 1
     load()
+  } catch { /* 拦截器已提示 */ }
+}
+
+// 导入：支持 .md/.markdown/.txt（MARKDOWN 草稿）与 .html/.htm（RICHTEXT 草稿），≤2MB
+const importInput = ref(null)
+const importing = ref(false)
+const IMPORT_ACCEPT_EXT = ['.md', '.markdown', '.txt', '.html', '.htm']
+const IMPORT_MAX_SIZE = 2 * 1024 * 1024
+
+function triggerImport() {
+  importInput.value?.click()
+}
+
+async function onImportFile(e) {
+  const file = e.target.files?.[0]
+  e.target.value = '' // 允许重复选择同一文件
+  if (!file) return
+  const name = (file.name || '').toLowerCase()
+  if (!IMPORT_ACCEPT_EXT.some(ext => name.endsWith(ext))) {
+    ElMessage.error('仅支持 .md/.markdown/.txt/.html/.htm 文件')
+    return
+  }
+  if (file.size > IMPORT_MAX_SIZE) {
+    ElMessage.error('文件大小不能超过 2MB')
+    return
+  }
+  importing.value = true
+  try {
+    const data = await importArticle(file)
+    ElMessage.success('导入成功，已创建草稿')
+    router.push(`/editor/${data.id}`)
+  } catch { /* 拦截器已提示 */ } finally {
+    importing.value = false
+  }
+}
+
+// 导出：按编辑器类型选择默认格式（MARKDOWN→md / RICHTEXT→html）
+async function onExport(row) {
+  try {
+    await exportArticle(row.id, row.editorType === 'RICHTEXT' ? 'html' : 'md')
   } catch { /* 拦截器已提示 */ }
 }
 
