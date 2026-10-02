@@ -22,6 +22,7 @@
 - 定时发布（立即/定时 + datetime 选择）；版本历史抽屉（列表 / 只读预览 / 一键恢复）
 - 封面支持本地上传或从附件库选择（AttachmentPicker）
 - 我的文章：回收站（恢复回草稿 / 彻底删除）、「定时中」状态标识；附件库分组管理（上传/搜索/换组/复制链接/删除）
+- 文章导入导出：导出 md/html 文件（按编辑器类型默认格式）；导入 .md/.markdown/.txt/.html/.htm（≤2MB）生成草稿并直达编辑页
 
 ### 互动社交
 - 评论：两层楼中楼、双排序、@ 提及，触发限流时自动出图形验证码
@@ -116,7 +117,7 @@ src/
 
 ## 测试与 CI
 
-- `pnpm test` 跑 Vitest（jsdom 环境），共 **18 个 spec 文件**，覆盖 api 层（http 拆包/验证码/上传/附件等）、
+- `pnpm test` 跑 Vitest（jsdom 环境），共 **20 个 spec 文件**，覆盖 api 层（http 拆包/验证码/上传/附件/导入导出等）、
   stores（auth/realtime）、router 守卫、布局及关键组件/页面（CaptchaInput、CommentSection、LoginView 等）。
 - GitHub Actions CI（`.github/workflows/ci.yml`）：push/PR 到 main 触发，
   Node 20 + pnpm 12，`pnpm install --frozen-lockfile` 严格模式（lockfile 未同步直接失败），
@@ -137,5 +138,5 @@ src/
 
 当前已完成：v1（M1–M5）+ M6 + P0 全量功能，含验证码、实时推送与站点设置。
 
-后续候选：slug 固定链接、文章密码保护、Markdown 导入导出、友情链接、自定义页面、
+后续候选：slug 固定链接、文章密码保护、友情链接、自定义页面、
 TOTP 两步验证、AI 摘要/评论审核增强、生产部署链路（镜像化）。

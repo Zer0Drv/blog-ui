@@ -35,6 +35,8 @@
               编辑
             </el-button>
           </template>
+          <!-- 导出：公开文章任何人可导出（契约同详情可见性），格式按编辑器类型 -->
+          <el-button size="small" link :loading="exporting" @click="onExport">导出</el-button>
         </div>
         <img v-if="article.cover" :src="resolveUploadUrl(article.cover)" class="cover" alt="cover" />
         <el-divider />
@@ -116,7 +118,7 @@ import { MdPreview, MdCatalog } from 'md-editor-v3'
 import 'md-editor-v3/lib/preview.css'
 import { ElMessage } from 'element-plus'
 import { View, Pointer, Star, ChatDotRound } from '@element-plus/icons-vue'
-import { getArticle } from '../api/article'
+import { getArticle, exportArticle } from '../api/article'
 import { likeArticle, unlikeArticle, favoriteArticle, unfavoriteArticle } from '../api/interaction'
 import { follow, unfollow, getUserProfile } from '../api/social'
 import { resolveUploadUrl } from '../api/upload'
@@ -151,6 +153,19 @@ function statusText(s) {
 
 function statusType(s) {
   return { DRAFT: 'info', PUBLISHED: 'success', OFFLINE: 'warning' }[s] || 'info'
+}
+
+// 导出：MARKDOWN→md，RICHTEXT→html；文件名由后端 Content-Disposition 提供
+const exporting = ref(false)
+
+async function onExport() {
+  if (!article.value) return
+  exporting.value = true
+  try {
+    await exportArticle(article.value.id, article.value.editorType === 'MARKDOWN' ? 'md' : 'html')
+  } catch { /* 拦截器已提示 */ } finally {
+    exporting.value = false
+  }
 }
 
 // P0 文章目录（TOC）：MARKDOWN 走 MdCatalog（onGetCatalog 判空），富文本自行提取 h2/h3
