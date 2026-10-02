@@ -37,6 +37,10 @@
           </el-badge>
           <el-dropdown trigger="click" @command="onCommand">
             <span class="user-entry">
+              <el-avatar
+                :size="28"
+                :src="auth.user?.avatar ? resolveUploadUrl(auth.user.avatar) : ''"
+              >{{ (auth.user?.nickname || auth.user?.username || '用').slice(0, 1) }}</el-avatar>
               {{ auth.user?.nickname || auth.user?.username || '用户' }}
               <el-icon><ArrowDown /></el-icon>
             </span>
@@ -80,6 +84,8 @@ import { ArrowDown, Bell, Search } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
 import { getUnreadCount } from '../api/notification'
 import { getSiteConfig } from '../api/site'
+import { resolveUploadUrl } from '../api/upload'
+import { onProfileUpdated } from '../utils/profileSync'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -170,9 +176,15 @@ onMounted(() => {
   document.addEventListener('visibilitychange', onVisibilityChange)
 })
 
+// 资料变更（本标签页保存/其他标签页广播）时刷新全局用户状态，导航栏头像/昵称即时更新
+const offProfileUpdated = onProfileUpdated(() => {
+  if (auth.isLoggedIn) auth.fetchMe().catch(() => {})
+})
+
 onUnmounted(() => {
   stopPolling()
   document.removeEventListener('visibilitychange', onVisibilityChange)
+  offProfileUpdated()
 })
 
 async function onCommand(cmd) {
