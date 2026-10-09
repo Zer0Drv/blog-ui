@@ -84,10 +84,10 @@ import { ArrowDown, Bell, Search } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
 import { useRealtimeStore } from '../stores/realtime'
 import { getUnreadCount } from '../api/notification'
-import { getSiteConfig } from '../api/site'
 import { resolveUploadUrl } from '../api/upload'
 import { onProfileUpdated } from '../utils/profileSync'
 import { onUnreadChanged } from '../utils/unreadSync'
+import { ensureSiteConfig, useSiteConfig } from '../composables/useSiteConfig'
 
 const auth = useAuthStore()
 const realtime = useRealtimeStore()
@@ -104,36 +104,10 @@ function onSearch() {
   router.push({ path: '/search', query: { keyword: kw } })
 }
 
-// P0 站点信息：品牌名/页脚；GET /site/config 结果缓存 sessionStorage，失败静默保留默认
-const siteName = ref('Blog')
-const siteDescription = ref('')
-const siteIcp = ref('')
+// P0 站点信息：品牌名/页脚；共享 useSiteConfig（sessionStorage 缓存，失败静默保留默认）
+const { siteName, siteDescription, siteIcp } = useSiteConfig()
 
-function applySiteConfig(config) {
-  if (!config) return
-  if (config['site.name']) siteName.value = config['site.name']
-  siteDescription.value = config['site.description'] || ''
-  siteIcp.value = config['site.icp'] || ''
-}
-
-async function loadSiteConfig() {
-  try {
-    const cached = sessionStorage.getItem('site:config')
-    if (cached) {
-      applySiteConfig(JSON.parse(cached))
-      return
-    }
-  } catch { /* 缓存损坏则走接口 */ }
-  try {
-    const data = await getSiteConfig()
-    applySiteConfig(data)
-    try {
-      sessionStorage.setItem('site:config', JSON.stringify(data || {}))
-    } catch { /* 存储失败静默 */ }
-  } catch { /* 失败静默，保留默认 Blog */ }
-}
-
-onMounted(loadSiteConfig)
+onMounted(ensureSiteConfig)
 
 onMounted(() => {
   if (auth.isLoggedIn && !auth.user) auth.fetchMe().catch(() => {})

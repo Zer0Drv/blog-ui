@@ -1,32 +1,37 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
+import { syncRouteTitle } from '../composables/useDocumentTitle'
 
+// meta.title 供页签标题（afterEach 组合为 `<title> - <站点名>`）；
+// 管理后台页自带「- 管理后台」层级，如 站点设置 - 管理后台 - <站点名>
 const routes = [
-  { path: '/login', name: 'login', component: () => import('../views/LoginView.vue'), meta: { public: true } },
+  { path: '/login', name: 'login', component: () => import('../views/LoginView.vue'), meta: { public: true, title: '登录' } },
   // GitHub OAuth 回跳（后端 302 带一次性 code，前端换取 Cookie 会话）
-  { path: '/oauth/callback', name: 'oauth-callback', component: () => import('../views/OAuthCallbackView.vue'), meta: { public: true } },
+  { path: '/oauth/callback', name: 'oauth-callback', component: () => import('../views/OAuthCallbackView.vue'), meta: { public: true, title: '登录' } },
   {
     path: '/',
     component: () => import('../layouts/MainLayout.vue'),
     children: [
-      { path: '', name: 'home', component: () => import('../views/HomeView.vue'), meta: { public: true } },
-      { path: 'article/:id', name: 'article-detail', component: () => import('../views/ArticleDetailView.vue'), meta: { public: true } },
+      { path: '', name: 'home', component: () => import('../views/HomeView.vue'), meta: { public: true, title: '首页' } },
+      // 标题由详情加载后覆盖为文章标题（useDocumentTitle）
+      { path: 'article/:id', name: 'article-detail', component: () => import('../views/ArticleDetailView.vue'), meta: { public: true, title: '文章详情' } },
       // P0 阅读侧：归档/全文搜索（公开，组件由 frontend-E 提供）
-      { path: 'archives', name: 'archives', component: () => import('../views/ArchivesView.vue'), meta: { public: true } },
-      { path: 'search', name: 'search', component: () => import('../views/SearchView.vue'), meta: { public: true } },
-      { path: 'my/articles', name: 'my-articles', component: () => import('../views/MyArticlesView.vue'), meta: { roles: ['ADMIN', 'AUTHOR'] } },
-      { path: 'my/favorites', name: 'my-favorites', component: () => import('../views/MyFavoritesView.vue') },
+      { path: 'archives', name: 'archives', component: () => import('../views/ArchivesView.vue'), meta: { public: true, title: '归档' } },
+      { path: 'search', name: 'search', component: () => import('../views/SearchView.vue'), meta: { public: true, title: '搜索' } },
+      { path: 'my/articles', name: 'my-articles', component: () => import('../views/MyArticlesView.vue'), meta: { roles: ['ADMIN', 'AUTHOR'], title: '我的文章' } },
+      { path: 'my/favorites', name: 'my-favorites', component: () => import('../views/MyFavoritesView.vue'), meta: { title: '我的收藏' } },
       // P0 作者侧：附件库（需登录，组件由 frontend-D 提供）
-      { path: 'my/attachments', name: 'my-attachments', component: () => import('../views/AttachmentsView.vue') },
-      { path: 'settings', name: 'settings', component: () => import('../views/SettingsView.vue') },
+      { path: 'my/attachments', name: 'my-attachments', component: () => import('../views/AttachmentsView.vue'), meta: { title: '附件库' } },
+      { path: 'settings', name: 'settings', component: () => import('../views/SettingsView.vue'), meta: { title: '设置' } },
       // M4 社交：通知/用户主页/关注动态/私信（/users/:id 公开，其余需登录）
-      { path: 'notifications', name: 'notifications', component: () => import('../views/NotificationsView.vue') },
-      { path: 'users/:id', name: 'user-profile', component: () => import('../views/UserProfileView.vue'), meta: { public: true } },
-      { path: 'feed', name: 'feed', component: () => import('../views/FeedView.vue') },
-      { path: 'messages', name: 'messages', component: () => import('../views/MessagesView.vue') },
-      { path: 'editor/new', name: 'editor-new', component: () => import('../views/ArticleEditView.vue'), meta: { roles: ['ADMIN', 'AUTHOR'] } },
-      { path: 'editor/:id', name: 'editor-edit', component: () => import('../views/ArticleEditView.vue'), meta: { roles: ['ADMIN', 'AUTHOR'] } }
+      { path: 'notifications', name: 'notifications', component: () => import('../views/NotificationsView.vue'), meta: { title: '通知' } },
+      // 标题由主页加载后覆盖为用户昵称（useDocumentTitle）
+      { path: 'users/:id', name: 'user-profile', component: () => import('../views/UserProfileView.vue'), meta: { public: true, title: '用户主页' } },
+      { path: 'feed', name: 'feed', component: () => import('../views/FeedView.vue'), meta: { title: '动态' } },
+      { path: 'messages', name: 'messages', component: () => import('../views/MessagesView.vue'), meta: { title: '私信' } },
+      { path: 'editor/new', name: 'editor-new', component: () => import('../views/ArticleEditView.vue'), meta: { roles: ['ADMIN', 'AUTHOR'], title: '写文章' } },
+      { path: 'editor/:id', name: 'editor-edit', component: () => import('../views/ArticleEditView.vue'), meta: { roles: ['ADMIN', 'AUTHOR'], title: '编辑文章' } }
     ]
   },
   {
@@ -35,13 +40,13 @@ const routes = [
     component: () => import('../layouts/AdminLayout.vue'),
     meta: { roles: ['ADMIN'] },
     children: [
-      { path: '', name: 'admin-dashboard', component: () => import('../views/admin/AdminDashboard.vue'), meta: { roles: ['ADMIN'] } },
-      { path: 'articles', name: 'admin-articles', component: () => import('../views/admin/AdminArticles.vue'), meta: { roles: ['ADMIN'] } },
-      { path: 'comments', name: 'admin-comments', component: () => import('../views/admin/AdminComments.vue'), meta: { roles: ['ADMIN'] } },
-      { path: 'sensitive-words', name: 'admin-sensitive-words', component: () => import('../views/admin/AdminSensitiveWords.vue'), meta: { roles: ['ADMIN'] } },
-      { path: 'taxonomy', name: 'admin-taxonomy', component: () => import('../views/admin/AdminTaxonomy.vue'), meta: { roles: ['ADMIN'] } },
-      { path: 'users', name: 'admin-users', component: () => import('../views/admin/AdminUsers.vue'), meta: { roles: ['ADMIN'] } },
-      { path: 'site', name: 'admin-site', component: () => import('../views/admin/AdminSite.vue'), meta: { roles: ['ADMIN'] } }
+      { path: '', name: 'admin-dashboard', component: () => import('../views/admin/AdminDashboard.vue'), meta: { roles: ['ADMIN'], title: '仪表盘 - 管理后台' } },
+      { path: 'articles', name: 'admin-articles', component: () => import('../views/admin/AdminArticles.vue'), meta: { roles: ['ADMIN'], title: '文章管理 - 管理后台' } },
+      { path: 'comments', name: 'admin-comments', component: () => import('../views/admin/AdminComments.vue'), meta: { roles: ['ADMIN'], title: '评论治理 - 管理后台' } },
+      { path: 'sensitive-words', name: 'admin-sensitive-words', component: () => import('../views/admin/AdminSensitiveWords.vue'), meta: { roles: ['ADMIN'], title: '敏感词库 - 管理后台' } },
+      { path: 'taxonomy', name: 'admin-taxonomy', component: () => import('../views/admin/AdminTaxonomy.vue'), meta: { roles: ['ADMIN'], title: '标签分类 - 管理后台' } },
+      { path: 'users', name: 'admin-users', component: () => import('../views/admin/AdminUsers.vue'), meta: { roles: ['ADMIN'], title: '用户管理 - 管理后台' } },
+      { path: 'site', name: 'admin-site', component: () => import('../views/admin/AdminSite.vue'), meta: { roles: ['ADMIN'], title: '站点设置 - 管理后台' } }
     ]
   },
   { path: '/:pathMatch(.*)*', redirect: '/' }
@@ -67,5 +72,8 @@ router.beforeEach(async to => {
   }
   return true
 })
+
+// 页签标题：导航确认后套用 to.meta.title（动态页的覆盖随之失效，回到路由标题）
+router.afterEach(syncRouteTitle)
 
 export default router

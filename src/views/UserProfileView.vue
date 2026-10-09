@@ -102,10 +102,14 @@ import { getUserProfile, follow, unfollow, pageUserArticles, listFollowers, list
 import { resolveUploadUrl } from '../api/upload'
 import { useAuthStore } from '../stores/auth'
 import { onProfileUpdated } from '../utils/profileSync'
+import { useDocumentTitle } from '../composables/useDocumentTitle'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+
+// 页签标题：主页加载完成后覆盖为用户昵称，离开页面自动恢复路由标题
+const { setTitle } = useDocumentTitle()
 
 const userId = computed(() => route.params.id)
 const profile = ref(null)
@@ -128,6 +132,7 @@ async function loadProfile() {
   profileLoading.value = true
   try {
     profile.value = await getUserProfile(userId.value)
+    setTitle(profile.value?.nickname || profile.value?.username)
   } catch { /* 拦截器已提示 */ } finally {
     profileLoading.value = false
   }

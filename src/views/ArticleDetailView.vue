@@ -124,11 +124,15 @@ import { follow, unfollow, getUserProfile } from '../api/social'
 import { resolveUploadUrl } from '../api/upload'
 import { sanitizeHtml } from '../utils/sanitize'
 import { useAuthStore } from '../stores/auth'
+import { useDocumentTitle } from '../composables/useDocumentTitle'
 import CommentSection from '../components/CommentSection.vue'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+
+// 页签标题：文章加载完成后覆盖为文章标题，离开页面自动恢复路由标题
+const { setTitle } = useDocumentTitle()
 
 const article = ref(null)
 const loading = ref(true)
@@ -293,6 +297,7 @@ onMounted(async () => {
   }
   try {
     article.value = await getArticle(route.params.id)
+    setTitle(article.value?.title)
     loadAuthorFollowState()
     // 富文本：等 v-html 渲染完成后再提取目录（MARKDOWN 由 MdCatalog 自动联动）
     if (article.value && article.value.editorType !== 'MARKDOWN') {
