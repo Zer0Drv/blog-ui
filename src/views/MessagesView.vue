@@ -278,9 +278,6 @@ const offProfileUpdated = onProfileUpdated(loadConversations)
 
 onMounted(async () => {
   realtime.on('private_message', onRealtimeMessage)
-  if (!auth.user) {
-    try { await auth.fetchMe() } catch { /* 忽略 */ }
-  }
   await loadConversations()
   if (route.query.peerId) {
     await openPeerFromQuery()

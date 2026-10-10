@@ -143,8 +143,8 @@ const sanitizedContent = computed(() => sanitizeHtml(article.value?.content || '
 
 const canManage = computed(() => {
   if (!auth.user || !article.value) return false
-  return auth.user.role === 'ADMIN' ||
-    (['ADMIN', 'AUTHOR'].includes(auth.user.role) && auth.user.id === article.value.author?.id)
+  return auth.isAdmin ||
+    (auth.canWrite && auth.user.id === article.value.author?.id)
 })
 
 function formatTime(t) {
@@ -292,9 +292,6 @@ async function toggleFollowAuthor() {
 }
 
 onMounted(async () => {
-  if (auth.isLoggedIn && !auth.user) {
-    try { await auth.fetchMe() } catch { /* 忽略 */ }
-  }
   try {
     article.value = await getArticle(route.params.id)
     setTitle(article.value?.title)

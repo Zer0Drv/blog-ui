@@ -23,7 +23,7 @@
           </template>
         </el-input>
         <template v-if="auth.isLoggedIn">
-          <el-button v-if="canWrite" type="primary" @click="router.push('/editor/new')">
+          <el-button v-if="auth.canWrite" type="primary" @click="router.push('/editor/new')">
             写文章
           </el-button>
           <!-- M4 通知铃铛：未读数 30s 轮询兜底，已读事件/WS 推送即时刷新，页面隐藏暂停 -->
@@ -46,8 +46,8 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item v-if="auth.user?.role === 'ADMIN'" command="admin">管理后台</el-dropdown-item>
-                <el-dropdown-item v-if="canWrite" command="mine">我的文章</el-dropdown-item>
+                <el-dropdown-item v-if="auth.isAdmin" command="admin">管理后台</el-dropdown-item>
+                <el-dropdown-item v-if="auth.canWrite" command="mine">我的文章</el-dropdown-item>
                 <el-dropdown-item command="favorites">我的收藏</el-dropdown-item>
                 <el-dropdown-item command="messages">私信</el-dropdown-item>
                 <el-dropdown-item command="settings">个人设置</el-dropdown-item>
@@ -78,7 +78,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowDown, Bell, Search } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
@@ -93,8 +93,6 @@ const auth = useAuthStore()
 const realtime = useRealtimeStore()
 const router = useRouter()
 
-const canWrite = computed(() => ['ADMIN', 'AUTHOR'].includes(auth.user?.role))
-
 // P0 搜索框：回车跳搜索页
 const searchKeyword = ref('')
 
@@ -108,10 +106,6 @@ function onSearch() {
 const { siteName, siteDescription, siteIcp } = useSiteConfig()
 
 onMounted(ensureSiteConfig)
-
-onMounted(() => {
-  if (auth.isLoggedIn && !auth.user) auth.fetchMe().catch(() => {})
-})
 
 // M4 通知未读数轮询（30s；document.hidden 时暂停）
 const unreadCount = ref(0)

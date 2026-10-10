@@ -86,9 +86,7 @@
 import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { useAuthStore } from '../stores/auth'
-import http from '../api/http'
-import { CAPTCHA_REQUIRED_CODE } from '../api/captcha'
+import { useAuthStore, CAPTCHA_REQUIRED_CODE } from '../stores/auth'
 import CaptchaInput from '../components/CaptchaInput.vue'
 
 const router = useRouter()
@@ -155,10 +153,14 @@ const resetRules = {
   ]
 }
 
-// OAuth 失败回跳提示（failure-redirect 带 error=oauth_failed）
+// OAuth 失败回跳提示（failure-redirect 带 error=oauth_failed）；
+// 401 出口跳回登录页（reason=expired）时提示会话过期，登录成功后回跳 redirect
 onMounted(() => {
   if (route.query.error === 'oauth_failed') {
     ElMessage.error('GitHub 登录失败，请重试')
+  }
+  if (route.query.reason === 'expired') {
+    ElMessage.warning('登录已过期，请重新登录')
   }
 })
 
@@ -171,17 +173,17 @@ function onGithubLogin() {
 async function onLogin() {
   loading.value = true
   try {
-    // 直调 http 以支持 captcha；后端校验通过后 Set-Cookie（AUTH_TOKEN, HttpOnly），
-    // 前端不持有 token，只需拉取 /auth/me 建立会话（#13）
-    await http.post('/auth/login', {
+    // store 是 /auth/login 唯一调用方（#22）；后端校验通过后 Set-Cookie（AUTH_TOKEN, HttpOnly），
+    // 前端不持有 token，login 内部经 fetchMe 建立会话（#13）
+    await auth.login({
       username: loginForm.username,
       password: loginForm.password,
       ...captchaPayload(loginCaptcha)
     })
-    await auth.fetchMe()
     clearCaptcha(loginCaptcha)
     ElMessage.success('登录成功')
-    router.push({ name: 'home' })
+    // 401 过期跳来的（?redirect=）回原页面，其余回首页
+    router.push(route.query.redirect ? String(route.query.redirect) : { name: 'home' })
   } catch (err) {
     if (isCaptchaRequired(err)) showCaptcha(loginCaptcha, loginCaptchaRef)
   } finally {

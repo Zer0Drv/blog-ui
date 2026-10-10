@@ -7,7 +7,7 @@ import { getCaptcha } from '../../api/captcha'
 vi.mock('../../api/captcha', () => ({
   getCaptcha: vi.fn(),
   getCaptchaRequired: vi.fn(),
-  CAPTCHA_REQUIRED_CODE: '40050'
+  CAPTCHA_REQUIRED_CODE: '40066'
 }))
 
 const IMG_A = 'data:image/png;base64,AAA'
