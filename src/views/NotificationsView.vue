@@ -63,12 +63,11 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { pageNotifications, markRead, markAllRead } from '../api/notification'
 import { resolveUploadUrl } from '../api/upload'
-import { useRealtimeStore } from '../stores/realtime'
+import { useRealtimeTopic } from '../composables/useRealtimeTopic'
 import { onProfileUpdated } from '../utils/profileSync'
 import { notifyUnreadChanged } from '../utils/unreadSync'
 
 const router = useRouter()
-const realtime = useRealtimeStore()
 
 const typeTabs = [
   { label: '全部', value: '' },
@@ -161,16 +160,17 @@ function onRealtimeNotification(n) {
   }
 }
 
+// WS 订阅（poll: null = 现状无轮询兜底，显式声明；WS 断开由实时通道自行重连）
+useRealtimeTopic('notification', onRealtimeNotification, { poll: null })
+
 // 资料变更（头像/昵称等）时重新拉取通知列表，actor 头像即时刷新
 const offProfileUpdated = onProfileUpdated(load)
 
 onMounted(() => {
-  realtime.on('notification', onRealtimeNotification)
   load()
 })
 
 onUnmounted(() => {
-  realtime.off('notification', onRealtimeNotification)
   offProfileUpdated()
 })
 </script>

@@ -87,18 +87,17 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { listConversations, pageMessages, sendMessage, markConversationRead } from '../api/message'
 import { getUserProfile } from '../api/social'
 import { resolveUploadUrl } from '../api/upload'
 import { useAuthStore } from '../stores/auth'
-import { useRealtimeStore } from '../stores/realtime'
+import { useRealtimeTopic } from '../composables/useRealtimeTopic'
 import { onProfileUpdated } from '../utils/profileSync'
 import { notifyUnreadChanged } from '../utils/unreadSync'
 
 const auth = useAuthStore()
-const realtime = useRealtimeStore()
 const route = useRoute()
 
 const conversations = ref([])
@@ -115,8 +114,6 @@ const msgBoxRef = ref(null)
 
 const draft = ref('')
 const sending = ref(false)
-
-let pollTimer = null
 
 function isMine(m) {
   return String(m.senderId) === String(auth.user?.id)
@@ -227,18 +224,6 @@ async function poll() {
   markActiveRead()
 }
 
-function startPolling() {
-  stopPolling()
-  pollTimer = setInterval(poll, 5000)
-}
-
-function stopPolling() {
-  if (pollTimer) {
-    clearInterval(pollTimer)
-    pollTimer = null
-  }
-}
-
 // WS 推送的私信：当前会话则刷新消息并标记已读，否则只刷新会话列表（未读角标/最后一条）
 function onRealtimeMessage(msg) {
   if (!msg) return
@@ -250,11 +235,8 @@ function onRealtimeMessage(msg) {
   }
 }
 
-// WS 连接状态联动轮询兜底：断开起 5s 轮询，连上即停
-watch(() => realtime.connected, ok => {
-  if (ok) stopPolling()
-  else startPolling()
-})
+// WS 订阅 + 断线 5s 轮询兜底（挂载订阅、卸载退订、连上即停，全部内收于惯用法）
+useRealtimeTopic('private_message', onRealtimeMessage, { poll, interval: 5000 })
 
 // 通过 ?peerId= 发起新会话：会话列表里没有时，用用户资料构造一个临时会话
 async function openPeerFromQuery() {
@@ -277,20 +259,15 @@ async function openPeerFromQuery() {
 const offProfileUpdated = onProfileUpdated(loadConversations)
 
 onMounted(async () => {
-  realtime.on('private_message', onRealtimeMessage)
   await loadConversations()
   if (route.query.peerId) {
     await openPeerFromQuery()
   } else if (conversations.value.length) {
     selectConversation(conversations.value[0].peer)
   }
-  // WS 未连接才起 5s 轮询兜底；连上后由 watch 停掉
-  if (!realtime.connected) startPolling()
 })
 
 onUnmounted(() => {
-  realtime.off('private_message', onRealtimeMessage)
-  stopPolling()
   offProfileUpdated()
 })
 </script>
