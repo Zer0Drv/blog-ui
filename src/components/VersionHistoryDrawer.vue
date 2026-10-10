@@ -34,11 +34,10 @@
     >
       <div v-loading="previewLoading" class="preview-body">
         <template v-if="preview">
-          <MdPreview
+          <MdContentPreview
             v-if="preview.editorType === 'MARKDOWN'"
+            :content="preview.content || ''"
             :editor-id="previewId"
-            :model-value="preview.content || ''"
-            :sanitize="sanitizeHtml"
           />
           <div v-else class="rich-preview" v-html="sanitizedPreview"></div>
         </template>
@@ -50,10 +49,9 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { MdPreview } from 'md-editor-v3'
-import 'md-editor-v3/lib/preview.css'
 import { getArticleVersion, listArticleVersions, restoreArticleVersion } from '../api/article'
 import { sanitizeHtml } from '../utils/sanitize'
+import MdContentPreview from './MdContentPreview.vue'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },

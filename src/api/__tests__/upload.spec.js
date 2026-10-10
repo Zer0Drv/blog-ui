@@ -1,5 +1,10 @@
-import { describe, it, expect } from 'vitest'
-import { resolveUploadUrl } from '../upload'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { resolveUploadUrl, uploadAndResolveUrl } from '../upload'
+import http from '../http'
+
+vi.mock('../http', () => ({
+  default: { post: vi.fn() }
+}))
 
 describe('resolveUploadUrl', () => {
   it('绝对 http/https URL 原样返回', () => {
@@ -26,5 +31,27 @@ describe('resolveUploadUrl', () => {
 
   it('非斜杠开头的相对路径原样返回', () => {
     expect(resolveUploadUrl('uploads/a.png')).toBe('uploads/a.png')
+  })
+})
+
+describe('uploadAndResolveUrl', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('上传成功返回补过 /api 前缀的可展示 URL', async () => {
+    http.post.mockResolvedValue({ url: '/uploads/202401/abc.png' })
+    const file = new File(['x'], 'abc.png', { type: 'image/png' })
+
+    await expect(uploadAndResolveUrl(file)).resolves.toBe('/api/uploads/202401/abc.png')
+    expect(http.post).toHaveBeenCalledTimes(1)
+    const [path, body] = http.post.mock.calls[0]
+    expect(path).toBe('/upload/image')
+    expect(body.get('file')).toBe(file)
+  })
+
+  it('上传失败时抛错（拦截器已提示，调用方兜底）', async () => {
+    http.post.mockRejectedValue(new Error('网络错误'))
+    await expect(uploadAndResolveUrl(new File(['x'], 'a.png'))).rejects.toThrow('网络错误')
   })
 })

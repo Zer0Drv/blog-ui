@@ -17,3 +17,13 @@ export function resolveUploadUrl(url) {
   if (/^https?:\/\//.test(url) || url.startsWith('data:') || url.startsWith('blob:')) return url
   return url.startsWith('/') ? `/api${url}` : url
 }
+
+// 上传并返回可直接展示/插入的 URL（复用 resolveUploadUrl 补 /api 前缀）。
+// 失败抛错，由调用方兜底（http 拦截器已统一提示）。
+// 注意：需要把原始 /uploads/** 持久化到后端的场景（封面、附件库）应继续用
+// uploadImage 拿 data.url，不要用本函数——持久化补过前缀的 URL 会被
+// resolveUploadUrl 再次补前缀导致双重 /api。
+export async function uploadAndResolveUrl(file) {
+  const data = await uploadImage(file)
+  return resolveUploadUrl(data.url)
+}

@@ -72,21 +72,7 @@
               placeholder="支持 Markdown 语法，可直接粘贴/上传图片"
               style="height: 520px"
             />
-            <template v-else>
-              <Toolbar
-                class="rt-toolbar"
-                :editor="editorRef"
-                :default-config="toolbarConfig"
-                mode="default"
-              />
-              <Editor
-                v-model="htmlContent"
-                class="rt-editor"
-                :default-config="editorConfig"
-                mode="default"
-                @on-created="onEditorCreated"
-              />
-            </template>
+            <RichEditor v-else v-model="htmlContent" />
           </div>
         </el-form-item>
 
@@ -134,13 +120,11 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
-import '@wangeditor/editor/dist/css/style.css'
-import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import {
   createArticle,
   getArticle,
@@ -149,9 +133,10 @@ import {
 } from '../api/article'
 import { listCategories } from '../api/category'
 import { listTags } from '../api/tag'
-import { resolveUploadUrl, uploadImage } from '../api/upload'
+import { resolveUploadUrl, uploadAndResolveUrl, uploadImage } from '../api/upload'
 import { useAuthStore } from '../stores/auth'
 import AttachmentPicker from '../components/AttachmentPicker.vue'
+import RichEditor from '../components/RichEditor.vue'
 import VersionHistoryDrawer from '../components/VersionHistoryDrawer.vue'
 import {
   DRAFT_NEW_KEY,
@@ -194,43 +179,10 @@ const tags = ref([])
 
 const mdEditorId = `md-editor-${articleId.value || 'new'}`
 
-/* ---------- wangeditor ---------- */
-const editorRef = shallowRef()
-const toolbarConfig = {}
-const editorConfig = {
-  placeholder: '请输入正文...',
-  MENU_CONF: {
-    uploadImage: {
-      // 自定义上传：走统一 http 实例（带 token、走 /api 代理）
-      async customUpload(file, insertFn) {
-        try {
-          const data = await uploadImage(file)
-          insertFn(resolveUploadUrl(data.url), file.name, resolveUploadUrl(data.url))
-        } catch { /* 拦截器已提示 */ }
-      }
-    }
-  }
-}
-
-function onEditorCreated(editor) {
-  editorRef.value = editor
-}
-
-onBeforeUnmount(() => {
-  // 编辑器实例销毁归页面（自动保存的卸载补存由 useArticleAutosave 自己的钩子负责）
-  editorRef.value?.destroy()
-  editorRef.value = undefined
-})
-
 /* ---------- Markdown 图片上传 ---------- */
 async function onMdUploadImg(files, callback) {
   try {
-    const urls = await Promise.all(
-      files.map(async f => {
-        const data = await uploadImage(f)
-        return resolveUploadUrl(data.url)
-      })
-    )
+    const urls = await Promise.all(files.map(f => uploadAndResolveUrl(f)))
     callback(urls)
   } catch { /* 拦截器已提示 */ }
 }
@@ -491,13 +443,6 @@ onMounted(async () => {
 }
 .editor-wrap {
   width: 100%;
-}
-.rt-toolbar {
-  border-bottom: 1px solid #e4e7ed;
-}
-.rt-editor {
-  height: 480px !important;
-  overflow-y: hidden;
 }
 .actions {
   display: flex;
