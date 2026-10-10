@@ -9,6 +9,14 @@ name: CD
 on:
   push:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'vite.config.*'
+      - 'index.html'
+      - '.github/workflows/cd.yml'
   workflow_dispatch:
 
 concurrency:
@@ -16,8 +24,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ---- 门控：解析 [skip cd] 提交标记 ----
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.flag.outputs.deploy }}
+    steps:
+      - name: 检查 [skip cd] 标记
+        id: flag
+        env:
+          MSG: ${{ toJSON(github.event.head_commit.message) }}
+        run: |
+          if echo "$MSG" | grep -qi '\[skip cd\]'; then
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            echo "检测到 [skip cd]：本次提交跳过部署"
+          else
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+
   # ---- 阶段 1：GitHub 托管 runner 构建产物 ----
   build:
+    needs: gate
+    if: needs.gate.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
