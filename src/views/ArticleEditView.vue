@@ -142,7 +142,6 @@ import 'md-editor-v3/lib/style.css'
 import '@wangeditor/editor/dist/css/style.css'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import {
-  autosaveArticle,
   createArticle,
   getArticle,
   getAutosave,
@@ -154,6 +153,21 @@ import { resolveUploadUrl, uploadImage } from '../api/upload'
 import { useAuthStore } from '../stores/auth'
 import AttachmentPicker from '../components/AttachmentPicker.vue'
 import VersionHistoryDrawer from '../components/VersionHistoryDrawer.vue'
+import {
+  DRAFT_NEW_KEY,
+  articleToFormState,
+  buildAutosaveBody,
+  canEditArticle,
+  draftToFormPatch,
+  formatClock,
+  formatLocalDateTime,
+  needsSwitchConfirm,
+  parseLocalDraft,
+  shouldOfferServerDraft,
+  validateArticle,
+  validatePublishTime
+} from '../utils/articleEdit'
+import { useArticleAutosave } from '../composables/useArticleAutosave'
 
 const route = useRoute()
 const router = useRouter()
@@ -203,12 +217,7 @@ function onEditorCreated(editor) {
 }
 
 onBeforeUnmount(() => {
-  // 卸载前对已存在文章补一次自动保存（新文章草稿已实时落在 localStorage）
-  if (autosaveTimer) clearTimeout(autosaveTimer)
-  if (dirty.value && articleId.value) {
-    const body = buildAutosaveBody()
-    if (body) autosaveArticle(articleId.value, body).catch(() => {})
-  }
+  // 编辑器实例销毁归页面（自动保存的卸载补存由 useArticleAutosave 自己的钩子负责）
   editorRef.value?.destroy()
   editorRef.value = undefined
 })
@@ -243,13 +252,10 @@ const prevEditorType = ref('MARKDOWN')
 
 function onEditorTypeChange(val) {
   const prev = prevEditorType.value
-  const hasContent = prev === 'MARKDOWN'
-    ? mdContent.value.trim()
-    : htmlContent.value.replace(/<[^>]+>/g, '').trim()
   const doSwitch = () => {
     prevEditorType.value = val
   }
-  if (!hasContent) {
+  if (!needsSwitchConfirm(prev, mdContent.value, htmlContent.value)) {
     doSwitch()
     return
   }
@@ -265,93 +271,27 @@ function onEditorTypeChange(val) {
   }).catch(() => {})
 }
 
-/* ---------- 自动保存 ---------- */
-const DRAFT_NEW_KEY = 'draft:new'
-const AUTOSAVE_DELAY = 30 * 1000
-
-const dirty = ref(false)
-const lastAutosavedAt = ref('')
-const initialized = ref(false)
-let autosaveTimer = null
-
-const autosaveTip = computed(() => {
-  if (dirty.value) return '有未保存的修改'
-  return lastAutosavedAt.value ? `已自动保存 ${lastAutosavedAt.value}` : ''
+/* ---------- 自动保存（状态机下沉至 composable，规则下沉至 utils） ---------- */
+const autosave = useArticleAutosave({
+  articleId,
+  buildBody: () => buildAutosaveBody(form, currentContent())
 })
+const autosaveTip = autosave.tip
 
-function pad2(n) {
-  return String(n).padStart(2, '0')
-}
-
-// 本地时间 yyyy-MM-ddTHH:mm:ss（后端 Jackson 默认 ISO 格式）
-function formatLocalDateTime(d) {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
-}
-
-function formatClock(t) {
-  const d = new Date(Number(t))
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
-}
-
-function buildAutosaveBody() {
-  const content = currentContent()
-  // 正文为空不自动保存（后端 content 非空校验）
-  if (!content.replace(/<[^>]+>/g, '').trim()) return null
-  return {
-    title: form.title.trim(),
-    content,
-    summary: form.summary,
-    cover: form.cover,
-    categoryId: form.categoryId || null
-  }
-}
-
-function scheduleAutosave() {
-  // 初始填充/版本恢复不触发自动保存计时
-  if (!initialized.value) return
-  dirty.value = true
-  if (autosaveTimer) clearTimeout(autosaveTimer)
-  autosaveTimer = setTimeout(doAutosave, AUTOSAVE_DELAY)
-}
-
+// 初始填充（onMounted）不触发计时；版本恢复 reloadArticle→fillArticle 的回填会触发——
+// 后者为 RFC 确认的现存行为，由 useArticleAutosave.spec 行为锁测试锁定
 watch(
   [() => form.title, () => form.summary, () => form.cover, () => form.categoryId, mdContent, htmlContent],
-  scheduleAutosave
+  autosave.notifyChanged
 )
 
-async function doAutosave() {
-  if (!dirty.value) return
-  const body = buildAutosaveBody()
-  if (!body) return
-  if (articleId.value) {
-    try {
-      const data = await autosaveArticle(articleId.value, body)
-      lastAutosavedAt.value = formatClock(data?.savedAt || Date.now())
-      dirty.value = false
-    } catch { /* 拦截器已提示 */ }
-  } else {
-    // 新文章无服务端 autosave，落 localStorage
-    localStorage.setItem(DRAFT_NEW_KEY, JSON.stringify({ ...body, savedAt: Date.now() }))
-    lastAutosavedAt.value = formatClock(Date.now())
-    dirty.value = false
-  }
-}
-
 function fillDraft(draft) {
-  if (draft.title != null) form.title = draft.title
-  if (draft.summary != null) form.summary = draft.summary
-  if (draft.cover != null) form.cover = draft.cover
-  if (draft.categoryId !== undefined) form.categoryId = draft.categoryId || null
-  if (draft.content != null) {
-    if (form.editorType === 'MARKDOWN') mdContent.value = draft.content
-    else htmlContent.value = draft.content
+  const { content, ...formPatch } = draftToFormPatch(draft)
+  Object.assign(form, formPatch)
+  if (content !== undefined) {
+    if (form.editorType === 'MARKDOWN') mdContent.value = content
+    else htmlContent.value = content
   }
-}
-
-function clearDraftMarks() {
-  dirty.value = false
-  if (autosaveTimer) clearTimeout(autosaveTimer)
-  localStorage.removeItem(DRAFT_NEW_KEY)
 }
 
 /* ---------- 保存 ---------- */
@@ -359,22 +299,13 @@ function currentContent() {
   return form.editorType === 'MARKDOWN' ? mdContent.value : htmlContent.value
 }
 
-function validate(content) {
-  if (!form.title.trim()) {
-    ElMessage.warning('请填写标题')
-    return false
-  }
-  const plain = content.replace(/<[^>]+>/g, '').trim()
-  if (!plain) {
-    ElMessage.warning('正文不能为空')
-    return false
-  }
-  return true
-}
-
 async function onSave(status, publishTime) {
   const content = currentContent()
-  if (!validate(content)) return
+  const v = validateArticle(form, content)
+  if (!v.ok) {
+    ElMessage.warning(v.message)
+    return
+  }
   saving.value = true
   try {
     const body = {
@@ -400,7 +331,7 @@ async function onSave(status, publishTime) {
       }
     }
     // 服务端会自删 autosave；本地清 localStorage 草稿与未保存标记
-    clearDraftMarks()
+    autosave.clearDraft()
     publishDialogVisible.value = false
     ElMessage.success(
       status === 'PUBLISHED'
@@ -432,12 +363,9 @@ function disabledPublishDate(date) {
 
 function confirmPublish() {
   if (publishMode.value === 'schedule') {
-    if (!publishTime.value) {
-      ElMessage.warning('请选择定时发布时间')
-      return
-    }
-    if (publishTime.value.getTime() <= Date.now() + 5 * 60 * 1000) {
-      ElMessage.warning('定时发布时间需晚于当前时间至少 5 分钟')
+    const v = validatePublishTime(publishTime.value)
+    if (!v.ok) {
+      ElMessage.warning(v.message)
       return
     }
     onSave('PUBLISHED', formatLocalDateTime(publishTime.value))
@@ -465,19 +393,18 @@ async function reloadArticle() {
 }
 
 function fillArticle(a) {
-  form.title = a.title || ''
-  form.summary = a.summary || ''
-  form.cover = a.cover || ''
-  form.categoryId = a.categoryId || null
-  form.tagIds = (a.tags || []).map(t => t.id)
-  form.editorType = a.editorType || 'MARKDOWN'
+  const s = articleToFormState(a)
+  form.title = s.title
+  form.summary = s.summary
+  form.cover = s.cover
+  form.categoryId = s.categoryId
+  form.tagIds = s.tagIds
+  form.editorType = s.editorType
   prevEditorType.value = form.editorType
   modeLocked.value = true
-  if (a.editorType === 'MARKDOWN') {
-    mdContent.value = a.content || ''
-  } else {
-    htmlContent.value = a.content || ''
-  }
+  // 正文槽位：articleToFormState 按原始 a.editorType 路由，未命中槽位为 null 不动
+  if (s.mdContent != null) mdContent.value = s.mdContent
+  else htmlContent.value = s.htmlContent
 }
 
 /* ---------- 初始化 ---------- */
@@ -486,28 +413,25 @@ onMounted(async () => {
   listTags().then(d => { tags.value = d || [] }).catch(() => {})
 
   if (!articleId.value) {
-    // 新文章：检测 localStorage 草稿
-    const raw = localStorage.getItem(DRAFT_NEW_KEY)
-    if (raw) {
-      try {
-        const draft = JSON.parse(raw)
-        await ElMessageBox.confirm(
-          `检测到本地草稿（${draft.savedAt ? formatClock(draft.savedAt) : '未知时间'}），恢复？`,
-          '恢复草稿',
-          { type: 'info', confirmButtonText: '恢复', cancelButtonText: '不恢复' }
-        ).then(() => fillDraft(draft)).catch(() => {
-          localStorage.removeItem(DRAFT_NEW_KEY)
-        })
-      } catch { /* 草稿损坏直接忽略 */ }
+    // 新文章：检测 localStorage 草稿（缺失/损坏直接忽略）
+    const draft = parseLocalDraft(localStorage.getItem(DRAFT_NEW_KEY))
+    if (draft) {
+      await ElMessageBox.confirm(
+        `检测到本地草稿（${draft.savedAt ? formatClock(draft.savedAt) : '未知时间'}），恢复？`,
+        '恢复草稿',
+        { type: 'info', confirmButtonText: '恢复', cancelButtonText: '不恢复' }
+      ).then(() => fillDraft(draft)).catch(() => {
+        localStorage.removeItem(DRAFT_NEW_KEY)
+      })
     }
-    initialized.value = true
+    autosave.markInitialized()
     return
   }
   pageLoading.value = true
   try {
     const a = await getArticle(articleId.value)
     // 编辑他人文章提前拦截（后端保存时也会拒绝，这里避免加载出完整内容）
-    if (auth.user?.role !== 'ADMIN' && String(a.author?.id) !== String(auth.user?.id)) {
+    if (!canEditArticle(auth.user, a)) {
       ElMessage.warning('只能编辑自己的文章')
       router.replace({ name: 'my-articles' })
       return
@@ -516,8 +440,7 @@ onMounted(async () => {
     // 服务端自动保存草稿：savedAt 晚于文章 updateTime 时提示恢复
     try {
       const draft = await getAutosave(articleId.value)
-      const articleTime = a.updateTime ? new Date(String(a.updateTime).replace(' ', 'T')).getTime() : 0
-      if (draft?.exists && Number(draft.savedAt) > articleTime) {
+      if (shouldOfferServerDraft(draft, a.updateTime)) {
         await ElMessageBox.confirm(
           `检测到自动保存草稿（${formatClock(draft.savedAt)}），恢复？`,
           '恢复草稿',
@@ -527,7 +450,7 @@ onMounted(async () => {
     } catch { /* 拦截器已提示 */ }
   } catch { /* 拦截器已提示 */ } finally {
     pageLoading.value = false
-    initialized.value = true
+    autosave.markInitialized()
   }
 })
 </script>
