@@ -3,7 +3,7 @@
 export const ROLES = {
   ADMIN: 'ADMIN',
   AUTHOR: 'AUTHOR',
-  READER: 'READER'
+  USER: 'USER'
 }
 
 // 角色组：写作者（可发文/进编辑器）
