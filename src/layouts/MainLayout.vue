@@ -82,7 +82,7 @@ import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowDown, Bell, Search } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
-import { useRealtimeStore } from '../stores/realtime'
+import { useRealtimeTopic } from '../composables/useRealtimeTopic'
 import { getUnreadCount } from '../api/notification'
 import { resolveUploadUrl } from '../api/upload'
 import { onProfileUpdated } from '../utils/profileSync'
@@ -90,7 +90,6 @@ import { onUnreadChanged } from '../utils/unreadSync'
 import { ensureSiteConfig, useSiteConfig } from '../composables/useSiteConfig'
 
 const auth = useAuthStore()
-const realtime = useRealtimeStore()
 const router = useRouter()
 
 // P0 搜索框：回车跳搜索页
@@ -107,9 +106,8 @@ const { siteName, siteDescription, siteIcp } = useSiteConfig()
 
 onMounted(ensureSiteConfig)
 
-// M4 通知未读数轮询（30s；document.hidden 时暂停）
+// M4 通知未读数轮询（30s 常轮询，页面隐藏暂停由 useRealtimeTopic 内收）
 const unreadCount = ref(0)
-let timer = null
 
 async function refreshUnread() {
   if (!auth.isLoggedIn || document.visibilityState !== 'visible') return
@@ -119,32 +117,18 @@ async function refreshUnread() {
   } catch { /* 静默失败，下次轮询重试 */ }
 }
 
-function startPolling() {
-  stopPolling()
-  refreshUnread()
-  timer = setInterval(refreshUnread, 30000)
-}
+// 未读徽标：WS 推送（通知/私信）即时刷新 + 30s 常轮询兜底（页面隐藏时暂停、恢复可见立即补一次）
+useRealtimeTopic('notification', refreshUnread, { poll: refreshUnread, interval: 30000, mode: 'always', pauseWhenHidden: true })
+useRealtimeTopic('private_message', refreshUnread, { poll: null })
 
-function stopPolling() {
-  if (timer) {
-    clearInterval(timer)
-    timer = null
-  }
-  unreadCount.value = 0
-}
-
-function onVisibilityChange() {
-  if (document.visibilityState === 'visible') refreshUnread()
-}
-
+// 登录态联动：登录立即补一次未读数；登出清零角标
 watch(() => auth.isLoggedIn, loggedIn => {
-  if (loggedIn) startPolling()
-  else stopPolling()
+  if (loggedIn) refreshUnread()
+  else unreadCount.value = 0
 })
 
 onMounted(() => {
-  if (auth.isLoggedIn) startPolling()
-  document.addEventListener('visibilitychange', onVisibilityChange)
+  if (auth.isLoggedIn) refreshUnread()
 })
 
 // 资料变更（本标签页保存/其他标签页广播）时刷新全局用户状态，导航栏头像/昵称即时更新
@@ -154,21 +138,12 @@ const offProfileUpdated = onProfileUpdated(() => {
 
 // 未读徽标即时刷新（不等 30s 轮询）：
 // 1) 本标签页/其他标签页标记已读后广播 unread-changed，立即重拉未读数
-// 2) WS 推送新通知/新私信时，未读数立即 +N
+// 2) WS 推送新通知/新私信时，未读数立即 +N（由上方 useRealtimeTopic 订阅承担）
 const offUnreadChanged = onUnreadChanged(() => refreshUnread())
 
-onMounted(() => {
-  realtime.on('notification', refreshUnread)
-  realtime.on('private_message', refreshUnread)
-})
-
 onUnmounted(() => {
-  stopPolling()
-  document.removeEventListener('visibilitychange', onVisibilityChange)
   offProfileUpdated()
   offUnreadChanged()
-  realtime.off('notification', refreshUnread)
-  realtime.off('private_message', refreshUnread)
 })
 
 async function onCommand(cmd) {
