@@ -40,13 +40,12 @@
         </div>
         <img v-if="article.cover" :src="resolveUploadUrl(article.cover)" class="cover" alt="cover" />
         <el-divider />
-        <!-- 渲染前统一 DOMPurify 消毒（#9 存储型 XSS 防护） -->
-        <MdPreview
+        <!-- 渲染前统一 DOMPurify 消毒（#9 存储型 XSS 防护，sanitize 收口于 MdContentPreview） -->
+        <MdContentPreview
           v-if="article.editorType === 'MARKDOWN'"
-          :model-value="article.content || ''"
+          :content="article.content || ''"
           :editor-id="previewId"
-          :sanitize="sanitizeHtml"
-          @on-get-catalog="onGetCatalog"
+          @get-catalog="onGetCatalog"
         />
         <!-- RICHTEXT 模式渲染消毒后的 HTML（<script>/on* 事件等已被移除） -->
         <div v-else ref="richtextRef" class="richtext" v-html="sanitizedContent" />
@@ -91,7 +90,7 @@
         <aside v-if="hasToc" class="toc-aside">
           <div class="toc-box">
             <div class="toc-title">目录</div>
-            <!-- MARKDOWN：MdCatalog 通过 editorId 与页内 MdPreview 联动，默认文档滚动 -->
+            <!-- MARKDOWN：MdCatalog 通过 editorId 与页内 MdContentPreview 联动，默认文档滚动 -->
             <MdCatalog v-if="isMarkdown" :editor-id="previewId" :scroll-element-offset-top="70" />
             <!-- 富文本：渲染完成后从正文提取 h2/h3（≤20 条），点击平滑滚动 -->
             <ul v-else class="toc-list">
@@ -114,8 +113,7 @@
 <script setup>
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { MdPreview, MdCatalog } from 'md-editor-v3'
-import 'md-editor-v3/lib/preview.css'
+import { MdCatalog } from 'md-editor-v3'
 import { ElMessage } from 'element-plus'
 import { View, Pointer, Star, ChatDotRound } from '@element-plus/icons-vue'
 import { getArticle, exportArticle } from '../api/article'
@@ -126,6 +124,7 @@ import { sanitizeHtml } from '../utils/sanitize'
 import { useAuthStore } from '../stores/auth'
 import { useDocumentTitle } from '../composables/useDocumentTitle'
 import CommentSection from '../components/CommentSection.vue'
+import MdContentPreview from '../components/MdContentPreview.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -180,7 +179,7 @@ const richtextRef = ref(null)
 const hasToc = computed(() =>
   isMarkdown.value ? mdCatalogList.value.length > 0 : tocItems.value.length > 0)
 
-// MdPreview 渲染完成后吐出标题列表；为空则不渲染目录块
+// MdContentPreview 渲染完成后吐出标题列表；为空则不渲染目录块
 function onGetCatalog(list) {
   mdCatalogList.value = list || []
 }
