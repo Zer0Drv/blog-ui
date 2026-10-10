@@ -1,0 +1,71 @@
+name: CD
+
+# 前端 CD：GitHub 托管 runner 构建 dist → 自托管 runner 同步到部署机 MinIO blog-frontend 桶
+# 前置（一次性）：
+#   1) 同后端：本机注册 self-hosted runner（任一仓库注册一次，整机可用）
+#   2) 仓库 Settings → Secrets：MINIO_ACCESS_KEY / MINIO_SECRET_KEY（部署机 MinIO 凭据）
+# 前端不走镜像：dist 推对象存储，Nginx 网关（blog 仓库 deploy/nginx.conf）边缘缓存直出
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: cd-frontend
+  cancel-in-progress: false
+
+jobs:
+  # ---- 阶段 1：GitHub 托管 runner 构建产物 ----
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm run build
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/
+          retention-days: 7
+
+  # ---- 阶段 2：自托管 runner（部署机）推送到 MinIO ----
+  deploy:
+    needs: build
+    runs-on: self-hosted
+    environment: production
+    steps:
+      - name: 下载构建产物
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/
+
+      - name: 同步到 MinIO blog-frontend 桶
+        env:
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+        run: |
+          mc alias set deploy http://localhost:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+          mc mirror --overwrite --remove dist/ deploy/blog-frontend/
+          echo "发布完成，网关边缘缓存对 index.html 为 no-cache，即时生效"
