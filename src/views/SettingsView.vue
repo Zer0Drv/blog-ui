@@ -172,10 +172,7 @@ async function onChangePassword() {
   }
 }
 
-onMounted(async () => {
-  if (!auth.user) {
-    try { await auth.fetchMe() } catch { /* 拦截器已提示 */ }
-  }
+onMounted(() => {
   fillProfile()
   loadPreferences()
 })

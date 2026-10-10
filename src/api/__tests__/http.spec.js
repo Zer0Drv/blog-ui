@@ -19,7 +19,9 @@ vi.mock('element-plus', () => ({
 }))
 
 // 动态导入确保 mock 先生效
-const http = (await import('../http')).default
+const httpModule = await import('../http')
+const http = httpModule.default
+const { setUnauthorizedHandler } = httpModule
 
 describe('http 拦截器', () => {
   beforeEach(() => {
@@ -82,5 +84,46 @@ describe('http 拦截器', () => {
     expect(err.code).toBe('40010')
     const { ElMessage } = await import('element-plus')
     expect(ElMessage.error).toHaveBeenCalledWith('文件大小不能超过 2MB')
+  })
+
+  it('401 非探测请求触发装配层注册的回调（不再整页跳转）', async () => {
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
+    const err = {
+      response: { status: 401, data: { message: '登录已过期' } },
+      config: { url: '/articles' },
+      message: 'Request failed with status code 401'
+    }
+
+    await expect(handlers.bad(err)).rejects.toBe(err)
+
+    expect(onUnauthorized).toHaveBeenCalledTimes(1)
+    setUnauthorizedHandler(null)
+  })
+
+  it('401 且为 /auth/me 会话探测时静默放行，不触发回调', async () => {
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
+    const err = {
+      response: { status: 401, data: {} },
+      config: { url: '/auth/me' },
+      message: 'Request failed with status code 401'
+    }
+
+    await expect(handlers.bad(err)).rejects.toBe(err)
+
+    expect(onUnauthorized).not.toHaveBeenCalled()
+    setUnauthorizedHandler(null)
+  })
+
+  it('未注册回调时 401 不抛额外错误', async () => {
+    setUnauthorizedHandler(null)
+    const err = {
+      response: { status: 401, data: {} },
+      config: { url: '/articles' },
+      message: 'Request failed with status code 401'
+    }
+
+    await expect(handlers.bad(err)).rejects.toBe(err)
   })
 })

@@ -11,6 +11,12 @@ const http = axios.create({
   headers: { 'X-Requested-With': 'XMLHttpRequest' }
 })
 
+// 401 出口（#22）：http 层不 import store/router（防循环依赖），由装配层（main.js）反向注册回调
+let unauthorizedHandler = null
+export function setUnauthorizedHandler(fn) {
+  unauthorizedHandler = fn
+}
+
 // 读取 Blob 错误体为 JSON（FileReader 兼容浏览器与 jsdom，Blob.text 在 jsdom 缺失）
 function readBlobAsJson(blob) {
   return new Promise((resolve, reject) => {
@@ -47,10 +53,10 @@ http.interceptors.response.use(
       } catch { /* 非 JSON 错误体，保持原样 */ }
     }
     if (err.response?.status === 401) {
-      // Cookie 会话失效（过期/被踢）统一跳登录页；
-      // /auth/me 用于登录态探测，401 属预期结果，不跳转、不提示
+      // Cookie 会话失效（过期/被踢）：触发装配层注册的回调（expireSession + SPA 内跳登录页），
+      // 不再 location.href 整页刷新（保住内存草稿）；/auth/me 探测 401 属预期结果，静默放行
       const isSessionProbe = /\/auth\/me$/.test(err.config?.url || '')
-      if (!isSessionProbe && location.pathname !== '/login') location.href = '/login'
+      if (!isSessionProbe && location.pathname !== '/login') unauthorizedHandler?.()
     }
     if (err.response?.status !== 401 || !/\/auth\/me$/.test(err.config?.url || '')) {
       ElMessage.error(err.response?.data?.message || err.message || '网络错误')

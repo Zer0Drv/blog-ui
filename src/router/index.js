@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
+import { ROLES, ROLE_GROUPS } from '../constants/roles'
 import { syncRouteTitle } from '../composables/useDocumentTitle'
 
 // meta.title 供页签标题（afterEach 组合为 `<title> - <站点名>`）；
@@ -19,7 +20,7 @@ const routes = [
       // P0 阅读侧：归档/全文搜索（公开，组件由 frontend-E 提供）
       { path: 'archives', name: 'archives', component: () => import('../views/ArchivesView.vue'), meta: { public: true, title: '归档' } },
       { path: 'search', name: 'search', component: () => import('../views/SearchView.vue'), meta: { public: true, title: '搜索' } },
-      { path: 'my/articles', name: 'my-articles', component: () => import('../views/MyArticlesView.vue'), meta: { roles: ['ADMIN', 'AUTHOR'], title: '我的文章' } },
+      { path: 'my/articles', name: 'my-articles', component: () => import('../views/MyArticlesView.vue'), meta: { roles: ROLE_GROUPS.WRITERS, title: '我的文章' } },
       { path: 'my/favorites', name: 'my-favorites', component: () => import('../views/MyFavoritesView.vue'), meta: { title: '我的收藏' } },
       // P0 作者侧：附件库（需登录，组件由 frontend-D 提供）
       { path: 'my/attachments', name: 'my-attachments', component: () => import('../views/AttachmentsView.vue'), meta: { title: '附件库' } },
@@ -30,23 +31,23 @@ const routes = [
       { path: 'users/:id', name: 'user-profile', component: () => import('../views/UserProfileView.vue'), meta: { public: true, title: '用户主页' } },
       { path: 'feed', name: 'feed', component: () => import('../views/FeedView.vue'), meta: { title: '动态' } },
       { path: 'messages', name: 'messages', component: () => import('../views/MessagesView.vue'), meta: { title: '私信' } },
-      { path: 'editor/new', name: 'editor-new', component: () => import('../views/ArticleEditView.vue'), meta: { roles: ['ADMIN', 'AUTHOR'], title: '写文章' } },
-      { path: 'editor/:id', name: 'editor-edit', component: () => import('../views/ArticleEditView.vue'), meta: { roles: ['ADMIN', 'AUTHOR'], title: '编辑文章' } }
+      { path: 'editor/new', name: 'editor-new', component: () => import('../views/ArticleEditView.vue'), meta: { roles: ROLE_GROUPS.WRITERS, title: '写文章' } },
+      { path: 'editor/:id', name: 'editor-edit', component: () => import('../views/ArticleEditView.vue'), meta: { roles: ROLE_GROUPS.WRITERS, title: '编辑文章' } }
     ]
   },
   {
     // M5 管理后台：独立布局，全部仅 ADMIN 可访问
     path: '/admin',
     component: () => import('../layouts/AdminLayout.vue'),
-    meta: { roles: ['ADMIN'] },
+    meta: { roles: [ROLES.ADMIN] },
     children: [
-      { path: '', name: 'admin-dashboard', component: () => import('../views/admin/AdminDashboard.vue'), meta: { roles: ['ADMIN'], title: '仪表盘 - 管理后台' } },
-      { path: 'articles', name: 'admin-articles', component: () => import('../views/admin/AdminArticles.vue'), meta: { roles: ['ADMIN'], title: '文章管理 - 管理后台' } },
-      { path: 'comments', name: 'admin-comments', component: () => import('../views/admin/AdminComments.vue'), meta: { roles: ['ADMIN'], title: '评论治理 - 管理后台' } },
-      { path: 'sensitive-words', name: 'admin-sensitive-words', component: () => import('../views/admin/AdminSensitiveWords.vue'), meta: { roles: ['ADMIN'], title: '敏感词库 - 管理后台' } },
-      { path: 'taxonomy', name: 'admin-taxonomy', component: () => import('../views/admin/AdminTaxonomy.vue'), meta: { roles: ['ADMIN'], title: '标签分类 - 管理后台' } },
-      { path: 'users', name: 'admin-users', component: () => import('../views/admin/AdminUsers.vue'), meta: { roles: ['ADMIN'], title: '用户管理 - 管理后台' } },
-      { path: 'site', name: 'admin-site', component: () => import('../views/admin/AdminSite.vue'), meta: { roles: ['ADMIN'], title: '站点设置 - 管理后台' } }
+      { path: '', name: 'admin-dashboard', component: () => import('../views/admin/AdminDashboard.vue'), meta: { roles: [ROLES.ADMIN], title: '仪表盘 - 管理后台' } },
+      { path: 'articles', name: 'admin-articles', component: () => import('../views/admin/AdminArticles.vue'), meta: { roles: [ROLES.ADMIN], title: '文章管理 - 管理后台' } },
+      { path: 'comments', name: 'admin-comments', component: () => import('../views/admin/AdminComments.vue'), meta: { roles: [ROLES.ADMIN], title: '评论治理 - 管理后台' } },
+      { path: 'sensitive-words', name: 'admin-sensitive-words', component: () => import('../views/admin/AdminSensitiveWords.vue'), meta: { roles: [ROLES.ADMIN], title: '敏感词库 - 管理后台' } },
+      { path: 'taxonomy', name: 'admin-taxonomy', component: () => import('../views/admin/AdminTaxonomy.vue'), meta: { roles: [ROLES.ADMIN], title: '标签分类 - 管理后台' } },
+      { path: 'users', name: 'admin-users', component: () => import('../views/admin/AdminUsers.vue'), meta: { roles: [ROLES.ADMIN], title: '用户管理 - 管理后台' } },
+      { path: 'site', name: 'admin-site', component: () => import('../views/admin/AdminSite.vue'), meta: { roles: [ROLES.ADMIN], title: '站点设置 - 管理后台' } }
     ]
   },
   { path: '/:pathMatch(.*)*', redirect: '/' }
@@ -66,7 +67,7 @@ router.beforeEach(async to => {
   if (to.meta.public) return true
   if (!auth.isLoggedIn) return { name: 'login' }
 
-  if (to.meta.roles && !to.meta.roles.includes(auth.user?.role)) {
+  if (to.meta.roles && !auth.hasAnyRole(...to.meta.roles)) {
     ElMessage.warning('无权限访问该页面')
     return { name: 'home' }
   }

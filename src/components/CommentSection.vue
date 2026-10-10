@@ -264,7 +264,7 @@ function replyList(c) {
 
 function canDelete(c) {
   if (!auth.user) return false
-  return auth.user.role === 'ADMIN' || auth.user.id === c.user?.id
+  return auth.isAdmin || auth.user.id === c.user?.id
 }
 
 function goLogin() {
@@ -432,10 +432,7 @@ async function onDelete(c, root) {
   } catch { /* 拦截器已提示 */ }
 }
 
-onMounted(async () => {
-  if (auth.isLoggedIn && !auth.user) {
-    try { await auth.fetchMe() } catch { /* 忽略 */ }
-  }
+onMounted(() => {
   load()
 })
 

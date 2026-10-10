@@ -4,6 +4,8 @@ import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import App from './App.vue'
 import router from './router'
+import { setUnauthorizedHandler } from './api/http'
+import { useAuthStore } from './stores/auth'
 // md-editor-v3 扩展库（highlight.js/katex/mermaid）改为 bundle 内实例注入，消除 unpkg CDN 请求
 import './lib/mdEditorConfig'
 import { ensureSiteConfig } from './composables/useSiteConfig'
@@ -16,4 +18,15 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.use(ElementPlus)
+
+// 装配层唯一接线点（#22）：401 → 会话置 expired + SPA 内跳登录页（带过期原因与回跳地址）
+setUnauthorizedHandler(() => {
+  const auth = useAuthStore()
+  auth.expireSession()
+  router.push({
+    name: 'login',
+    query: { reason: 'expired', redirect: router.currentRoute.value.fullPath }
+  })
+})
+
 app.mount('#app')

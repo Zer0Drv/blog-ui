@@ -214,8 +214,7 @@ async function init() {
   page.value = 1
   await Promise.all([
     loadProfile(),
-    loadArticles(),
-    auth.isLoggedIn && !auth.user ? auth.fetchMe().catch(() => {}) : Promise.resolve()
+    loadArticles()
   ])
 }
 
