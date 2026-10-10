@@ -92,6 +92,7 @@
               >
                 <el-option label="用户" value="USER" />
                 <el-option label="作者" value="AUTHOR" />
+                <el-option label="管理员" value="ADMIN" />
               </el-select>
             </template>
             <el-tooltip v-else content="管理员账号不可操作" placement="left">
@@ -187,10 +188,10 @@ async function onUnban(row) {
 }
 
 async function onChangeRole(row, val) {
-  const action = val === 'AUTHOR' ? '设为作者' : '取消作者'
+  const action = { USER: '设为普通用户', AUTHOR: '设为作者', ADMIN: '提拔为管理员' }[val] || '变更角色'
   try {
     await ElMessageBox.confirm(
-      `确认将用户「${row.nickname || row.username}」${action}？`,
+      `确认将用户「${row.nickname || row.username}」${action}？角色变更后其所有登录态将被吊销，需重新登录。`,
       '提示',
       { type: 'warning' }
     )
