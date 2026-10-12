@@ -15,6 +15,12 @@ export default defineConfig({
       '/api': {
         target: process.env.API_TARGET || 'http://localhost:8082',
         changeOrigin: true,
+        // 浏览器对同源 POST 也会带 Origin 头；宿主预览会把端口重映射（如 7100），
+        // 透传的 Origin 命中后端 CORS 兜底白名单（默认仅 5173）→ 403 Invalid CORS request。
+        // dev 语义本就是"同源代理、无需 CORS"，故剥掉 Origin 还原该语义。
+        configure: proxy => {
+          proxy.on('proxyReq', proxyReq => proxyReq.removeHeader('origin'))
+        },
         rewrite: p => p.replace(/^\/api/, '')
       },
       // WebSocket（私信/通知实时推送）：同源 /ws 直转后端，不重写路径
