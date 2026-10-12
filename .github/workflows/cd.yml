@@ -48,17 +48,18 @@ jobs:
     if: needs.gate.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 12
 
+      # 与本地开发对齐（本机 v24）：Node 24 LTS；Node 20 已 EOL
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
 
       - name: Install dependencies
@@ -71,7 +72,7 @@ jobs:
         run: pnpm run build
 
       - name: 上传构建产物
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-dist
           path: dist/
@@ -88,7 +89,7 @@ jobs:
         shell: 'D:\KimiData\daimon-bundle\runtime\git\bin\bash.exe --noprofile --norc -eo pipefail {0}'
     steps:
       - name: 下载构建产物
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: frontend-dist
           path: dist/
