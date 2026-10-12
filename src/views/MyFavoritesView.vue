@@ -8,9 +8,11 @@
         v-for="a in articles"
         :key="a.id"
         class="article-card"
+        :class="{ 'is-offline': a.visible === false }"
         shadow="hover"
-        @click="goDetail(a.id)"
+        @click="onCardClick(a)"
       >
+        <el-tag v-if="a.visible === false" type="info" size="small" class="offline-badge">已下架</el-tag>
         <div class="card-body">
           <img v-if="a.cover" :src="resolveUploadUrl(a.cover)" class="cover" alt="cover" />
           <div class="info">
@@ -48,6 +50,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { pageMyFavorites } from '../api/interaction'
 import { resolveUploadUrl } from '../api/upload'
 
@@ -75,6 +78,15 @@ function onSizeChange() {
   load()
 }
 
+// 已下架/定时中（visible === false）的文章保留展示但不可进入详情
+function onCardClick(a) {
+  if (a.visible === false) {
+    ElMessage.warning('文章已下架')
+    return
+  }
+  goDetail(a.id)
+}
+
 function goDetail(id) {
   router.push(`/article/${id}`)
 }
@@ -92,8 +104,25 @@ onMounted(load)
   color: #303133;
 }
 .article-card {
+  position: relative;
   margin-bottom: 14px;
   cursor: pointer;
+}
+/* 已下架：内容灰化 + 不可点（角标保持实色可读） */
+.article-card.is-offline {
+  cursor: default;
+}
+.article-card.is-offline .card-body {
+  opacity: 0.55;
+}
+.article-card.is-offline .cover {
+  filter: grayscale(1);
+}
+.offline-badge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 1;
 }
 .card-body {
   display: flex;
