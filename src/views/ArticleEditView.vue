@@ -120,7 +120,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MdEditor } from 'md-editor-v3'
@@ -230,8 +230,8 @@ const autosave = useArticleAutosave({
 })
 const autosaveTip = autosave.tip
 
-// 初始填充（onMounted）不触发计时；版本恢复 reloadArticle→fillArticle 的回填会触发——
-// 后者为 RFC 确认的现存行为，由 useArticleAutosave.spec 行为锁测试锁定
+// 初始填充（onMounted）不触发计时；版本恢复 reloadArticle→fillArticle 的回填会触发，
+// 由 reloadArticle 在回填后调 autosave.markClean() 复位（useArticleAutosave.spec 行为锁锁定）
 watch(
   [() => form.title, () => form.summary, () => form.cover, () => form.categoryId, mdContent, htmlContent],
   autosave.notifyChanged
@@ -341,6 +341,10 @@ async function reloadArticle() {
   try {
     const a = await getArticle(articleId.value)
     fillArticle(a)
+    // 回填触发的 watch → notifyChanged 在下一 tick 才执行；等它跑完再复位状态机：
+    // 恢复版本不是"未保存的修改"，不应重新计时自动保存（之后的真实编辑仍正常计时）
+    await nextTick()
+    autosave.markClean()
   } catch { /* 拦截器已提示 */ }
 }
 

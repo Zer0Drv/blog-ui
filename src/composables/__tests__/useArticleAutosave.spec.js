@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { defineComponent, ref } from 'vue'
 import { mount } from '@vue/test-utils'
 import { useArticleAutosave } from '../useArticleAutosave'
-import { DRAFT_NEW_KEY, formatClock } from '../../utils/articleEdit'
+import { DRAFT_NEW_KEY, formatClock, parseLocalDraft } from '../../utils/articleEdit'
 
 // 挂最小测试组件：composable 依赖 onBeforeUnmount 生命周期
 function mountAutosave(options) {
@@ -181,70 +181,97 @@ describe('useArticleAutosave 状态机', () => {
     expect(saveLocal).not.toHaveBeenCalled()
   })
 
-  it('卸载补存：有 id 且脏时立即补一次 saveRemote，并清掉计时器', async () => {
-    const { api, wrapper, saveRemote } = setup()
+  it('卸载补存：有 id 且脏时立即补一次 saveRemote（仍走服务端轨，不写本地），并清掉计时器', async () => {
+    const { api, wrapper, saveRemote, saveLocal } = setup()
     api.markInitialized()
     api.notifyChanged()
 
     await wrapper.unmount()
     expect(saveRemote).toHaveBeenCalledTimes(1)
     expect(saveRemote).toHaveBeenCalledWith('42', BODY)
+    // 修正 B 回归：有 id 时卸载补存不碰本地轨
+    expect(saveLocal).not.toHaveBeenCalled()
+    expect(localStorage.getItem(DRAFT_NEW_KEY)).toBeNull()
 
     // 计时器已清：时间推进不会再存第二次
     await vi.advanceTimersByTimeAsync(60000)
     expect(saveRemote).toHaveBeenCalledTimes(1)
   })
 
-  it('卸载补存：正文为空（buildBody null）时不补存', async () => {
+  it('卸载补存：正文为空（buildBody null）时不补存（有 id / 无 id 都不写）', async () => {
     const { api, wrapper, saveRemote } = setup({ buildBody: () => null })
     api.markInitialized()
     api.notifyChanged()
 
     await wrapper.unmount()
     expect(saveRemote).not.toHaveBeenCalled()
+    expect(localStorage.getItem(DRAFT_NEW_KEY)).toBeNull()
+
+    // 修正 B 回归：新文章空内容卸载同样不写 localStorage
+    const second = setup({ articleId: ref(null), buildBody: () => null })
+    second.api.markInitialized()
+    second.api.notifyChanged()
+    await second.wrapper.unmount()
+    expect(second.saveRemote).not.toHaveBeenCalled()
+    expect(second.saveLocal).not.toHaveBeenCalled()
+    expect(localStorage.getItem(DRAFT_NEW_KEY)).toBeNull()
   })
 
-  it('行为锁①：版本恢复（initialized 之后的回填变更）会重新触发一次 30s 计时', async () => {
+  it('行为锁①（修正 A 反转）：版本恢复 markClean 后 30s 不自动保存、保持 clean；再次手动编辑重新计时', async () => {
     const { api, saveRemote } = setup()
     // 初始填充阶段：initialized 门挡住，不计时
     api.notifyChanged()
     await vi.advanceTimersByTimeAsync(60000)
     expect(saveRemote).not.toHaveBeenCalled()
 
-    // 进入已初始化状态后，版本恢复 reloadArticle→fillArticle 的回填会触发 watch
-    // → notifyChanged，重新武装一次 30s 自动保存计时（RFC 确认的现存行为）
+    // 版本恢复 reloadArticle→fillArticle 的回填触发 watch → notifyChanged（initialized 后），
+    // 视图随后调 markClean() 复位：清脏 + 停表，恢复本身不再武装自动保存
     api.markInitialized()
     api.notifyChanged()
     expect(api.status.value).toBe('pending')
+    api.markClean()
+    expect(api.status.value).toBe('clean')
 
+    // 30s（乃至更久）不发生自动保存，状态保持 clean
+    await vi.advanceTimersByTimeAsync(120000)
+    expect(saveRemote).not.toHaveBeenCalled()
+    expect(api.status.value).toBe('clean')
+
+    // 恢复后用户手动编辑：仍正常计时保存
+    api.notifyChanged()
+    expect(api.status.value).toBe('pending')
     await vi.advanceTimersByTimeAsync(30000)
     expect(saveRemote).toHaveBeenCalledTimes(1)
     expect(api.status.value).toBe('clean')
   })
 
-  it('行为锁②：新文章在 30s 内离开页面草稿即丢（卸载补存不走本地轨）', async () => {
-    const { api, wrapper, saveRemote, saveLocal } = setup({ articleId: ref(null) })
+  it('行为锁②（修正 B 反转）：新文章卸载时内容非空 → 补写 localStorage 草稿（带 savedAt，再次进入可恢复）', async () => {
+    // 用默认 saveLocal 验证 key/结构与定时器轨道一致
+    const saveRemote = vi.fn()
+    const { api, wrapper } = mountAutosave({
+      articleId: ref(null),
+      buildBody: () => BODY,
+      saveRemote,
+      delay: 30000
+    })
     api.markInitialized()
     api.notifyChanged()
 
-    // 10s 即离开：卸载补存只走服务端轨，无 id 时什么都不写
+    // 10s 即离开（定时器未到点）：卸载补存走本地轨
     await vi.advanceTimersByTimeAsync(10000)
     await wrapper.unmount()
     expect(saveRemote).not.toHaveBeenCalled()
-    expect(saveLocal).not.toHaveBeenCalled()
-    expect(localStorage.getItem(DRAFT_NEW_KEY)).toBeNull()
+    const raw = localStorage.getItem(DRAFT_NEW_KEY)
+    expect(raw).toBeTruthy()
+    const draft = JSON.parse(raw)
+    expect(draft.title).toBe('标题')
+    expect(draft.content).toBe('正文')
+    expect(typeof draft.savedAt).toBe('number')
 
-    // 计时器随卸载清理：推进到 30s 之后也不会补写
+    // 计时器随卸载清理：推进到 30s 之后不会重复写
     await vi.advanceTimersByTimeAsync(60000)
-    expect(saveLocal).not.toHaveBeenCalled()
-    expect(localStorage.getItem(DRAFT_NEW_KEY)).toBeNull()
 
-    // 对照：活到 30s 到点的新文章，本地轨会写入草稿
-    const second = setup({ articleId: ref(null) })
-    second.api.markInitialized()
-    second.api.notifyChanged()
-    await vi.advanceTimersByTimeAsync(30000)
-    expect(second.saveLocal).toHaveBeenCalledTimes(1)
-    await second.wrapper.unmount()
+    // 再次进入可恢复：parseLocalDraft 能原样解析卸载补存的草稿
+    expect(parseLocalDraft(raw)).toMatchObject({ title: '标题', content: '正文' })
   })
 })

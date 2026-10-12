@@ -8,10 +8,11 @@ import { notifyUnreadChanged } from '../../utils/unreadSync'
 
 // 捕获 realtime.on 注册的回调
 const listeners = vi.hoisted(() => ({}))
+const mocks = vi.hoisted(() => ({ push: vi.fn() }))
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ query: {} }),
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() })
+  useRouter: () => ({ push: mocks.push, replace: vi.fn() })
 }))
 
 vi.mock('../../stores/realtime', () => ({
@@ -101,5 +102,80 @@ describe('NotificationsView 已读后未读徽标同步', () => {
     expect(markAllRead).toHaveBeenCalledTimes(1)
     expect(notifyUnreadChanged).toHaveBeenCalledTimes(1)
     wrapper.unmount()
+  })
+})
+
+describe('NotificationsView ARTICLE_FORCE_DELETED 与断线轮询兜底', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    Object.keys(listeners).forEach(k => delete listeners[k])
+    document.body.innerHTML = ''
+    markRead.mockResolvedValue(undefined)
+    markAllRead.mockResolvedValue(undefined)
+  })
+
+  it('渲染「删除了你的文章」+ 标题 summary，点击不跳转已删文章详情', async () => {
+    pageNotifications.mockResolvedValue({
+      records: [{
+        id: 9,
+        type: 'ARTICLE_FORCE_DELETED',
+        readFlag: 1,
+        actor: null,
+        summary: '被删文章标题',
+        articleId: 55
+      }],
+      total: 1
+    })
+    const { wrapper } = mountView()
+    await flushPromises()
+
+    const item = wrapper.find('.notify-item')
+    expect(item.text()).toContain('系统')
+    expect(item.text()).toContain('删除了你的文章')
+    expect(item.text()).toContain('被删文章标题')
+
+    // 文章已不存在：点击不跳转详情（已读项也不再标记）
+    await item.trigger('click')
+    await flushPromises()
+    expect(mocks.push).not.toHaveBeenCalled()
+    expect(markRead).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('未读的强制删除通知点击后标记已读，但仍不跳转', async () => {
+    pageNotifications.mockResolvedValue({
+      records: [{ id: 10, type: 'ARTICLE_FORCE_DELETED', readFlag: 0, actor: null, summary: 't', articleId: 56 }],
+      total: 1
+    })
+    const { wrapper } = mountView()
+    await flushPromises()
+
+    await wrapper.find('.notify-item').trigger('click')
+    await flushPromises()
+    expect(markRead).toHaveBeenCalledWith(10)
+    expect(mocks.push).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('WS 断开时 5s 轮询兜底重拉通知列表（mock 通道 connected=false）', async () => {
+    vi.useFakeTimers()
+    pageNotifications.mockResolvedValue({ records: [], total: 0 })
+    const { wrapper } = mountView()
+    await flushPromises()
+    expect(pageNotifications).toHaveBeenCalledTimes(1) // 挂载首拉
+
+    // 兜底轮询只在 WS 断开时启用（mock 的 connected 恒为 false）
+    await vi.advanceTimersByTimeAsync(4999)
+    expect(pageNotifications).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(pageNotifications).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(pageNotifications).toHaveBeenCalledTimes(4)
+
+    // 卸载停止轮询
+    wrapper.unmount()
+    await vi.advanceTimersByTimeAsync(20000)
+    expect(pageNotifications).toHaveBeenCalledTimes(4)
+    vi.useRealTimers()
   })
 })

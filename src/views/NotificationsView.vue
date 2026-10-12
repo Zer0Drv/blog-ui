@@ -94,6 +94,7 @@ function actionText(type) {
     COMMENT_LIKE: '点赞了你的评论',
     FOLLOW: '关注了你',
     PRIVATE_MESSAGE: '给你发来私信',
+    ARTICLE_FORCE_DELETED: '删除了你的文章',
     SYSTEM: '系统通知'
   }[type] || '有新动态'
 }
@@ -127,7 +128,9 @@ async function onClick(n) {
       notifyUnreadChanged() // 通知导航栏立即刷新未读徽标
     } catch { /* 拦截器已提示 */ }
   }
-  if (n.type === 'PRIVATE_MESSAGE') {
+  if (n.type === 'ARTICLE_FORCE_DELETED') {
+    // 文章已被管理员删除：只标记已读，详情已不存在，不跳转
+  } else if (n.type === 'PRIVATE_MESSAGE') {
     router.push('/messages')
   } else if (n.type === 'FOLLOW' && n.actor?.id) {
     // 关注通知跳关注者主页
@@ -160,8 +163,8 @@ function onRealtimeNotification(n) {
   }
 }
 
-// WS 订阅（poll: null = 现状无轮询兜底，显式声明；WS 断开由实时通道自行重连）
-useRealtimeTopic('notification', onRealtimeNotification, { poll: null })
+// WS 订阅 + 断线 5s 轮询兜底（与私信页对齐：WS 断开才轮询、连上即停，内收于惯用法）
+useRealtimeTopic('notification', onRealtimeNotification, { poll: load, interval: 5000 })
 
 // 资料变更（头像/昵称等）时重新拉取通知列表，actor 头像即时刷新
 const offProfileUpdated = onProfileUpdated(load)
