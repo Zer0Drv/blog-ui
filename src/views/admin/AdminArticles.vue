@@ -72,7 +72,7 @@
         <el-table-column label="时间" width="160">
           <template #default="{ row }">{{ formatTime(row.publishTime || row.createTime) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button size="small" link type="primary" @click="router.push(`/article/${row.id}`)">
               查看
@@ -84,6 +84,12 @@
               type="danger"
               @click="onOffline(row)"
             >强制下架</el-button>
+            <el-button
+              size="small"
+              link
+              type="danger"
+              @click="onForceDelete(row)"
+            >强制删除</el-button>
           </template>
         </el-table-column>
         <template #empty>
@@ -117,6 +123,7 @@ import {
   setArticleRecommended,
   setArticleTop
 } from '../../api/admin'
+import { forceDeleteArticle } from '../../api/article'
 
 const router = useRouter()
 
@@ -182,6 +189,22 @@ async function onOffline(row) {
   try {
     await offlineArticle(row.id)
     ElMessage.success('已下架')
+    load()
+  } catch { /* 拦截器已提示 */ }
+}
+
+async function onForceDelete(row) {
+  try {
+    await ElMessageBox.confirm(`确认强制删除《${row.title}》？将物理删除并通知作者，删除后不可恢复！`, '警告', {
+      type: 'error',
+      confirmButtonText: '强制删除',
+      cancelButtonText: '取消'
+    })
+  } catch { return }
+  try {
+    await forceDeleteArticle(row.id)
+    ElMessage.success('已强制删除')
+    if (rows.value.length === 1 && page.value > 1) page.value -= 1
     load()
   } catch { /* 拦截器已提示 */ }
 }
