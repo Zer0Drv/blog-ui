@@ -118,13 +118,19 @@ jobs:
         run: |
           mc alias set deploy http://localhost:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
           if [ -n "${{ inputs.rollback_tag }}" ]; then
-            # 回滚：把归档版本镜像回线上根（--remove 清掉归档之外的文件）
-            mc mirror --overwrite --remove "deploy/blog-frontend-releases/$FRONTEND_TAG/" deploy/blog-frontend/
+            # 回滚：先验证归档存在（mc ls 对不存在前缀也返回 0，必须判空），再清线上桶并恢复
+            # 注意：本机 mc(2025-08) 的 mirror 对子前缀目标静默空传，故归档/回滚统一用 cp -r；
+            # 归档内嵌 dist/ 层（mc cp 本地目录必嵌目录名），回滚源指向 .../dist/ 子前缀（S3→S3 不嵌套）
+            if [ -z "$(mc ls "deploy/blog-frontend-releases/$FRONTEND_TAG/dist/" 2>/dev/null)" ]; then
+              echo "归档不存在：$FRONTEND_TAG（见 MinIO blog-frontend-releases 桶）"; exit 1
+            fi
+            mc rm --recursive --force deploy/blog-frontend/
+            mc cp --recursive "deploy/blog-frontend-releases/$FRONTEND_TAG/dist/" deploy/blog-frontend/
             echo "已回滚到 $FRONTEND_TAG"
           else
             # 正常发布：先归档版本快照（独立桶，不回删；若与线上同桶会被 --remove 清掉），再镜像到线上根
             mc mb -p deploy/blog-frontend-releases 2>/dev/null || true
-            mc mirror --overwrite dist/ "deploy/blog-frontend-releases/$FRONTEND_TAG/"
+            mc cp --recursive dist/ "deploy/blog-frontend-releases/$FRONTEND_TAG/"
             mc mirror --overwrite --remove dist/ deploy/blog-frontend/
             echo "发布完成（归档 blog-frontend-releases/$FRONTEND_TAG），网关边缘缓存对 index.html 为 no-cache，即时生效"
           fi
