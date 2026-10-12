@@ -5,7 +5,8 @@ name: CD
 #   1) 同后端：本机注册 self-hosted runner（任一仓库注册一次，整机可用）
 #   2) 仓库 Settings → Secrets：MINIO_ACCESS_KEY / MINIO_SECRET_KEY（部署机 MinIO 凭据）
 # 前端不走镜像：dist 推对象存储，Nginx 网关（blog 仓库 deploy/nginx.conf）边缘缓存直出
-
+# 版本归档：每次发布把 dist 镜像到 MinIO blog-frontend-releases/sha-<8位>/（不回删）；
+# 回滚：Actions → CD → Run workflow 填 rollback_tag ——跳过构建，把对应归档镜像回线上桶根
 on:
   push:
     branches: [main]
@@ -18,6 +19,11 @@ on:
       - 'index.html'
       - '.github/workflows/cd.yml'
   workflow_dispatch:
+    inputs:
+      rollback_tag:
+        description: '回滚到指定产物 tag（如 sha-1a2b3c4d，见 MinIO blog-frontend-releases 桶）；留空 = 正常构建部署最新'
+        required: false
+        type: string
 
 concurrency:
   group: cd-frontend
@@ -45,10 +51,17 @@ jobs:
   # ---- 阶段 1：GitHub 托管 runner 构建产物 ----
   build:
     needs: gate
-    if: needs.gate.outputs.deploy == 'true'
+    # 回滚模式（填了 rollback_tag）跳过构建
+    if: needs.gate.outputs.deploy == 'true' && (github.event_name == 'push' || inputs.rollback_tag == '')
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
+
+      - name: 计算产物 tag
+        id: meta
+        run: echo "tag=sha-$(echo ${{ github.sha }} | cut -c1-8)" >> "$GITHUB_OUTPUT"
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
@@ -80,7 +93,9 @@ jobs:
 
   # ---- 阶段 2：自托管 runner（部署机）推送到 MinIO ----
   deploy:
-    needs: build
+    needs: [gate, build]
+    # 回滚模式 build 被跳过：needs 跳过上会连带跳过本 job，需 always() 兜底
+    if: ${{ always() && needs.gate.outputs.deploy == 'true' && (inputs.rollback_tag != '' || needs.build.outputs.tag != '') }}
     runs-on: self-hosted
     environment: production
     defaults:
@@ -88,7 +103,8 @@ jobs:
         # 默认 shell 是 PowerShell：对中文/引号处理与 bash 不同，统一走 Git Bash
         shell: 'D:\KimiData\daimon-bundle\runtime\git\bin\bash.exe --noprofile --norc -eo pipefail {0}'
     steps:
-      - name: 下载构建产物
+      - name: 下载构建产物（回滚模式不需要）
+        if: ${{ inputs.rollback_tag == '' }}
         uses: actions/download-artifact@v8
         with:
           name: frontend-dist
@@ -98,7 +114,17 @@ jobs:
         env:
           MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
           MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+          FRONTEND_TAG: ${{ inputs.rollback_tag || needs.build.outputs.tag }}
         run: |
           mc alias set deploy http://localhost:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
-          mc mirror --overwrite --remove dist/ deploy/blog-frontend/
-          echo "发布完成，网关边缘缓存对 index.html 为 no-cache，即时生效"
+          if [ -n "${{ inputs.rollback_tag }}" ]; then
+            # 回滚：把归档版本镜像回线上根（--remove 清掉归档之外的文件）
+            mc mirror --overwrite --remove "deploy/blog-frontend-releases/$FRONTEND_TAG/" deploy/blog-frontend/
+            echo "已回滚到 $FRONTEND_TAG"
+          else
+            # 正常发布：先归档版本快照（独立桶，不回删；若与线上同桶会被 --remove 清掉），再镜像到线上根
+            mc mb -p deploy/blog-frontend-releases 2>/dev/null || true
+            mc mirror --overwrite dist/ "deploy/blog-frontend-releases/$FRONTEND_TAG/"
+            mc mirror --overwrite --remove dist/ deploy/blog-frontend/
+            echo "发布完成（归档 blog-frontend-releases/$FRONTEND_TAG），网关边缘缓存对 index.html 为 no-cache，即时生效"
+          fi
