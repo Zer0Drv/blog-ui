@@ -3,8 +3,8 @@ import { autosaveArticle } from '../api/article'
 import { AUTOSAVE_DELAY, DRAFT_NEW_KEY, formatClock } from '../utils/articleEdit'
 
 // 默认本地轨：新文章（无 id）自动保存落 localStorage。
-// 注意现状（行为锁测试锁定）：localStorage 仅在 30s 定时器到点时写入，
-// 卸载补存不走本地轨——新文章在 30s 内离开页面草稿即丢。
+// 定时器到点与卸载补存（内容非空时）都走本地轨，key/结构完全一致（含 savedAt），
+// 再次进入编辑器由恢复弹窗逻辑原样捡起。
 function defaultSaveLocal(body) {
   localStorage.setItem(DRAFT_NEW_KEY, JSON.stringify({ ...body, savedAt: Date.now() }))
 }
@@ -30,6 +30,7 @@ function defaultSaveLocal(body) {
  *   tip: import('vue').ComputedRef<string>,
  *   notifyChanged(): void,
  *   markInitialized(): void,
+ *   markClean(): void,
  *   clearDraft(): void
  * }}
  */
@@ -73,8 +74,7 @@ export function useArticleAutosave({
   }
 
   // 编辑变更入口。initialized 门：初始填充不触发计时；
-  // 版本恢复发生在 markInitialized 之后，其表单回填会重新武装一次计时——
-  // 属 RFC 确认的现存行为，行为锁测试锁定。
+  // 版本恢复的回填会触发一次 notifyChanged，由视图在回填后调 markClean() 复位
   function notifyChanged() {
     if (!initialized.value) return
     dirty.value = true
@@ -83,6 +83,13 @@ export function useArticleAutosave({
 
   function markInitialized() {
     initialized.value = true
+  }
+
+  // 版本恢复等外部回填后复位：清脏 + 停表，保持 initialized 与 lastSavedAt——
+  // 恢复本身不是"未保存的修改"，30s 到点不应再自动保存；之后的真实编辑仍正常计时
+  function markClean() {
+    dirty.value = false
+    clearTimer()
   }
 
   async function run() {
@@ -117,14 +124,19 @@ export function useArticleAutosave({
   }
 
   onBeforeUnmount(() => {
-    // 卸载前对已存在文章补一次自动保存（只走服务端轨）；
+    // 卸载前对未保存内容补存一次：有 id 走服务端轨；无 id（新文章）内容非空
+    // 也补写 localStorage 草稿，与定时器轨道同 key 同结构（含 savedAt）。
     // 与编辑器 destroy 分钩：编辑器生命周期归页面/组件，这里只管自动保存。
     clearTimer()
-    if (dirty.value && articleId.value) {
-      const body = buildBody()
-      if (body) saveRemote(articleId.value, body).catch(() => {})
+    if (!dirty.value) return
+    const body = buildBody()
+    if (!body) return
+    if (articleId.value) {
+      saveRemote(articleId.value, body).catch(() => {})
+    } else {
+      saveLocal(body)
     }
   })
 
-  return { status, tip, notifyChanged, markInitialized, clearDraft }
+  return { status, tip, notifyChanged, markInitialized, markClean, clearDraft }
 }
