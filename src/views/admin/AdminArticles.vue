@@ -5,6 +5,11 @@
         <div class="header">
           <span>文章管理</span>
           <div class="header-right">
+            <el-button
+              :disabled="selectedRows.length === 0"
+              :loading="exporting"
+              @click="onBatchExport"
+            >批量导出{{ selectedRows.length > 0 ? `（${selectedRows.length}）` : '' }}</el-button>
             <el-select
               v-model="status"
               placeholder="全部状态"
@@ -32,7 +37,8 @@
         </div>
       </template>
 
-      <el-table v-loading="loading" :data="rows" stripe>
+      <el-table v-loading="loading" :data="rows" stripe @selection-change="onSelectionChange">
+        <el-table-column type="selection" width="42" />
         <el-table-column label="标题" min-width="200" show-overflow-tooltip>
           <template #default="{ row }">
             <el-link type="primary" @click="router.push(`/article/${row.id}`)">{{ row.title }}</el-link>
@@ -127,7 +133,7 @@ import {
   setArticleRecommended,
   setArticleTop
 } from '../../api/admin'
-import { forceDeleteArticle } from '../../api/article'
+import { forceDeleteArticle, exportArticlesZip } from '../../api/article'
 
 const router = useRouter()
 
@@ -138,6 +144,24 @@ const size = ref(10)
 const status = ref('')
 const keyword = ref('')
 const loading = ref(false)
+
+// 批量导出（issue #16）：勾选多篇打包 zip（ADMIN 全量权限由后端校验）
+const selectedRows = ref([])
+const exporting = ref(false)
+
+function onSelectionChange(selection) {
+  selectedRows.value = selection
+}
+
+async function onBatchExport() {
+  if (selectedRows.value.length === 0) return
+  exporting.value = true
+  try {
+    await exportArticlesZip(selectedRows.value.map(row => row.id))
+  } catch { /* 拦截器已提示 */ } finally {
+    exporting.value = false
+  }
+}
 
 async function load() {
   loading.value = true

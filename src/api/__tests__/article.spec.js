@@ -10,7 +10,7 @@ const http = {
 
 vi.mock('../http', () => ({ default: http }))
 
-const { exportArticle, importArticle, getArticleBySlug } = await import('../article')
+const { exportArticle, exportArticlesZip, importArticle, getArticleBySlug } = await import('../article')
 
 describe('article 导入导出 api', () => {
   beforeEach(() => {
@@ -60,7 +60,7 @@ describe('article 导入导出 api', () => {
   })
 
   it('importArticle 以 multipart FormData 提交 file 字段并返回 data', async () => {
-    const vo = { id: 42, status: 'DRAFT', editorType: 'MARKDOWN' }
+    const vo = { imported: [{ id: 42, title: 'hello', warnings: [], externalImages: [] }], failed: [] }
     http.post.mockResolvedValue(vo)
     const file = new File(['# hello'], 'hello.md', { type: 'text/markdown' })
 
@@ -80,5 +80,36 @@ describe('article 导入导出 api', () => {
     await getArticleBySlug('my-post')
 
     expect(http.get).toHaveBeenCalledWith('/articles/slug/my-post')
+  })
+
+  it('exportArticlesZip 以 blob 请求 /articles/export 并逗号拼接 ids', async () => {
+    http.get.mockResolvedValue({ data: new Blob(['PK']), headers: {} })
+    const clicked = {}
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function () {
+      clicked.download = this.download
+    })
+
+    await exportArticlesZip([1, 2, 3])
+
+    expect(http.get).toHaveBeenCalledWith('/articles/export', {
+      params: { ids: '1,2,3' },
+      responseType: 'blob'
+    })
+    // 无 Content-Disposition 时回退默认 zip 文件名
+    expect(clicked.download).toBe('articles-export.zip')
+  })
+
+  it('exportArticlesZip 从 Content-Disposition 解析文件名', async () => {
+    http.get.mockResolvedValue({
+      data: new Blob(['PK']),
+      headers: { 'content-disposition': "attachment; filename*=UTF-8''articles-export.zip" }
+    })
+    const clicked = {}
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function () {
+      clicked.download = this.download
+    })
+
+    await exportArticlesZip([7])
+    expect(clicked.download).toBe('articles-export.zip')
   })
 })

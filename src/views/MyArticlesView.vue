@@ -18,11 +18,11 @@
             </el-select>
             <el-button :loading="importing" @click="triggerImport">导入文章</el-button>
             <el-button type="primary" @click="router.push('/editor/new')">写文章</el-button>
-            <!-- 导入：隐藏 file input，前端先校验扩展名与 2MB 大小 -->
+            <!-- 导入：隐藏 file input，前端先校验扩展名与大小（zip ≤5MB，其他 ≤2MB） -->
             <input
               ref="importInput"
               type="file"
-              accept=".md,.markdown,.txt,.html,.htm"
+              :accept="IMPORT_ACCEPT"
               style="display: none"
               @change="onImportFile"
             />
@@ -105,7 +105,8 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { deleteArticle, exportArticle, forceDeleteArticle, importArticle, pageMyArticles, restoreArticle, updateArticleStatus } from '../api/article'
+import { deleteArticle, exportArticle, forceDeleteArticle, pageMyArticles, restoreArticle, updateArticleStatus } from '../api/article'
+import { IMPORT_ACCEPT, useArticleImport } from '../composables/useArticleImport'
 
 const router = useRouter()
 
@@ -201,11 +202,13 @@ async function onForceDelete(row) {
   } catch { /* 拦截器已提示 */ }
 }
 
-// 导入：支持 .md/.markdown/.txt（MARKDOWN 草稿）与 .html/.htm（RICHTEXT 草稿），≤2MB
+// 导入：.md/.markdown/.txt/.html/.htm 单文件（≤2MB）或 .zip 批量（≤5MB），一律创建草稿；
+// 共享逻辑收口 useArticleImport（编辑器页同款入口复用）
 const importInput = ref(null)
-const importing = ref(false)
-const IMPORT_ACCEPT_EXT = ['.md', '.markdown', '.txt', '.html', '.htm']
-const IMPORT_MAX_SIZE = 2 * 1024 * 1024
+const { importing, handleFile: handleImportFile } = useArticleImport({
+  onImported: item => router.push(`/editor/${item.id}`),
+  onBatchDone: () => load()
+})
 
 function triggerImport() {
   importInput.value?.click()
@@ -214,24 +217,7 @@ function triggerImport() {
 async function onImportFile(e) {
   const file = e.target.files?.[0]
   e.target.value = '' // 允许重复选择同一文件
-  if (!file) return
-  const name = (file.name || '').toLowerCase()
-  if (!IMPORT_ACCEPT_EXT.some(ext => name.endsWith(ext))) {
-    ElMessage.error('仅支持 .md/.markdown/.txt/.html/.htm 文件')
-    return
-  }
-  if (file.size > IMPORT_MAX_SIZE) {
-    ElMessage.error('文件大小不能超过 2MB')
-    return
-  }
-  importing.value = true
-  try {
-    const data = await importArticle(file)
-    ElMessage.success('导入成功，已创建草稿')
-    router.push(`/editor/${data.id}`)
-  } catch { /* 拦截器已提示 */ } finally {
-    importing.value = false
-  }
+  await handleImportFile(file)
 }
 
 // 导出：按编辑器类型选择默认格式（MARKDOWN→md / RICHTEXT→html）

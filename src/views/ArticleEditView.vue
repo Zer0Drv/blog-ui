@@ -86,6 +86,16 @@
 
         <div class="actions">
           <span v-if="autosaveTip" class="autosave-tip">{{ autosaveTip }}</span>
+          <!-- 导入 .md/.zip：创建新草稿并跳转；导出：仅已保存的文章可导出 -->
+          <el-button :loading="importing" @click="triggerImport">导入</el-button>
+          <input
+            ref="importInput"
+            type="file"
+            :accept="IMPORT_ACCEPT"
+            style="display: none"
+            @change="onImportFile"
+          />
+          <el-button v-if="articleId" :loading="exporting" @click="onExport">导出</el-button>
           <el-button v-if="articleId" @click="historyVisible = true">历史版本</el-button>
           <el-button :loading="saving" @click="onSave('DRAFT')">保存草稿</el-button>
           <el-button type="primary" :loading="saving" @click="openPublishDialog">发布</el-button>
@@ -135,6 +145,7 @@ import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import {
   createArticle,
+  exportArticle,
   getArticle,
   getAutosave,
   updateArticle
@@ -146,6 +157,7 @@ import { useAuthStore } from '../stores/auth'
 import AttachmentPicker from '../components/AttachmentPicker.vue'
 import RichEditor from '../components/RichEditor.vue'
 import VersionHistoryDrawer from '../components/VersionHistoryDrawer.vue'
+import { IMPORT_ACCEPT, useArticleImport } from '../composables/useArticleImport'
 import {
   DRAFT_NEW_KEY,
   articleToFormState,
@@ -342,6 +354,37 @@ const pickerVisible = ref(false)
 
 function onPickCover(url) {
   form.cover = url
+}
+
+/* ---------- 导入 / 导出（issue #16）---------- */
+// 导入创建新草稿并跳到其编辑页（当前编辑内容由自动保存/本地草稿链路保护）；
+// 批量导入结果无单篇可跳，回我的文章列表看草稿清单
+const importInput = ref(null)
+const { importing, handleFile: handleImportFile } = useArticleImport({
+  onImported: item => router.push(`/editor/${item.id}`),
+  onBatchDone: () => router.push({ name: 'my-articles' })
+})
+
+function triggerImport() {
+  importInput.value?.click()
+}
+
+async function onImportFile(e) {
+  const file = e.target.files?.[0]
+  e.target.value = ''
+  await handleImportFile(file)
+}
+
+// 导出当前文章（仅已保存）：格式按编辑器类型（MARKDOWN→md / RICHTEXT→html）
+const exporting = ref(false)
+
+async function onExport() {
+  exporting.value = true
+  try {
+    await exportArticle(articleId.value, form.editorType === 'RICHTEXT' ? 'html' : 'md')
+  } catch { /* 拦截器已提示 */ } finally {
+    exporting.value = false
+  }
 }
 
 /* ---------- 历史版本 ---------- */

@@ -38,6 +38,8 @@ async function chooseFile(wrapper, file) {
   await flushPromises()
 }
 
+const importedItem = (id, warnings = []) => ({ id, title: `草稿${id}`, warnings, externalImages: [] })
+
 describe('MyArticlesView 导入文章', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -45,6 +47,7 @@ describe('MyArticlesView 导入文章', () => {
     pageMyArticles.mockResolvedValue({ records: [], total: 0 })
     vi.spyOn(ElMessage, 'error').mockImplementation(() => {})
     vi.spyOn(ElMessage, 'success').mockImplementation(() => {})
+    vi.spyOn(ElMessage, 'warning').mockImplementation(() => {})
   })
 
   it('拒绝不支持的扩展名，不发起导入请求', async () => {
@@ -54,11 +57,11 @@ describe('MyArticlesView 导入文章', () => {
     await chooseFile(wrapper, new File(['x'], 'note.pdf'))
 
     expect(importArticle).not.toHaveBeenCalled()
-    expect(ElMessage.error).toHaveBeenCalledWith('仅支持 .md/.markdown/.txt/.html/.htm 文件')
+    expect(ElMessage.error).toHaveBeenCalledWith('仅支持 .md/.markdown/.txt/.html/.htm/.zip 文件')
     wrapper.unmount()
   })
 
-  it('拒绝超过 2MB 的文件，不发起导入请求', async () => {
+  it('拒绝超过 2MB 的单文件，不发起导入请求', async () => {
     const wrapper = mountView()
     await flushPromises()
 
@@ -71,8 +74,21 @@ describe('MyArticlesView 导入文章', () => {
     wrapper.unmount()
   })
 
-  it('导入成功：提示并跳转到新草稿的编辑页', async () => {
-    importArticle.mockResolvedValue({ id: 42, status: 'DRAFT' })
+  it('拒绝超过 5MB 的 zip，不发起导入请求', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    const bigZip = new File(['x'], 'batch.zip')
+    Object.defineProperty(bigZip, 'size', { value: 5 * 1024 * 1024 + 1 })
+    await chooseFile(wrapper, bigZip)
+
+    expect(importArticle).not.toHaveBeenCalled()
+    expect(ElMessage.error).toHaveBeenCalledWith('zip 文件大小不能超过 5MB')
+    wrapper.unmount()
+  })
+
+  it('单篇导入成功：提示并跳转到新草稿的编辑页', async () => {
+    importArticle.mockResolvedValue({ imported: [importedItem(42)], failed: [] })
     const wrapper = mountView()
     await flushPromises()
 
@@ -85,8 +101,56 @@ describe('MyArticlesView 导入文章', () => {
     wrapper.unmount()
   })
 
+  it('单篇导入带警告（如 status 被忽略）：追加 warning 提示后照常跳转', async () => {
+    importArticle.mockResolvedValue({
+      imported: [importedItem(43, ['front matter 的 status 字段已忽略：导入一律创建草稿'])],
+      failed: []
+    })
+    const wrapper = mountView()
+    await flushPromises()
+
+    await chooseFile(wrapper, new File(['# hi'], 'draft.md'))
+
+    expect(ElMessage.success).toHaveBeenCalledWith('导入成功，已创建草稿')
+    expect(ElMessage.warning).toHaveBeenCalledWith('front matter 的 status 字段已忽略：导入一律创建草稿')
+    expect(routerPush).toHaveBeenCalledWith('/editor/43')
+    wrapper.unmount()
+  })
+
+  it('zip 多篇全部成功：汇总提示并刷新列表，不跳转', async () => {
+    importArticle.mockResolvedValue({ imported: [importedItem(1), importedItem(2)], failed: [] })
+    const wrapper = mountView()
+    await flushPromises()
+    pageMyArticles.mockClear()
+
+    await chooseFile(wrapper, new File(['PK'], 'batch.zip'))
+
+    expect(ElMessage.success).toHaveBeenCalledWith('导入成功，已创建 2 篇草稿')
+    expect(pageMyArticles).toHaveBeenCalledTimes(1)
+    expect(routerPush).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('zip 部分失败：提示成功/失败明细并刷新列表，不跳转', async () => {
+    importArticle.mockResolvedValue({
+      imported: [importedItem(1)],
+      failed: [{ name: 'bad.exe', message: '仅支持 .md/.markdown/.txt/.html 文件' }]
+    })
+    const wrapper = mountView()
+    await flushPromises()
+    pageMyArticles.mockClear()
+
+    await chooseFile(wrapper, new File(['PK'], 'batch.zip'))
+
+    expect(ElMessage.warning).toHaveBeenCalledWith(
+      '导入完成：成功 1 篇，失败 1 篇。bad.exe（仅支持 .md/.markdown/.txt/.html 文件）')
+    expect(pageMyArticles).toHaveBeenCalledTimes(1)
+    expect(routerPush).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
   it('导入失败（后端业务码已由拦截器提示）：不跳转', async () => {
-    importArticle.mockRejectedValue(Object.assign(new Error('文件过大'), { code: '40010' }))
+    importArticle.mockRejectedValue(Object.assign(new Error('文件过大'), { code: '40023' }))
     const wrapper = mountView()
     await flushPromises()
 

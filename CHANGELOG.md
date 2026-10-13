@@ -6,6 +6,7 @@
 
 ### Added
 
+- 文章 Markdown 导入导出增强（Zer0Drv/blog#16）：编辑器页新增「导入 / 导出」入口；我的文章导入支持 .zip 批量（逐条结果与失败明细提示、多篇成功刷新列表）与导入警告透传（如 status 忽略说明）；管理端文章列表支持勾选多篇批量导出 zip；导入逻辑下沉共享 composable `useArticleImport`
 - 文章 slug 固定链接（Zer0Drv/blog#14）：编辑器新增 slug 输入（留空后端自动生成，前端预校验格式）；公众端新增 `/article/:slug` 详情路由（旧 `/article/:id` 保留，数字优先命中 id 路由）；首页/搜索/归档/动态/用户主页/收藏夹文章链接经 `articlePath` 优先走 slug；管理端文章列表新增 Slug 列
 - 友情链接：管理端友链管理页（分页/新增/编辑/启停/删除）、公众端 `/links` 友链页与页脚入口；站点设置新增友链展示开关（Zer0Drv/blog#17）
 - CD 版本归档与回滚：每次发布归档至 MinIO `blog-frontend-releases/sha-<8位>`，`workflow_dispatch` 填 `rollback_tag` 恢复历史版本（#36、#42）
