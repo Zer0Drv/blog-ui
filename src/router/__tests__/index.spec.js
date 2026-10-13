@@ -26,4 +26,18 @@ describe('router', () => {
     expect(router.resolve('/article/Hello_World').name).not.toBe('article-detail')
     expect(router.resolve('/article/Hello_World').name).not.toBe('article-detail-slug')
   })
+
+  it('包含管理后台友情链接路由 /admin/friend-links（仅 ADMIN，issue #17）', () => {
+    expect(router.hasRoute('admin-friend-links')).toBe(true)
+    const route = router.getRoutes().find(r => r.name === 'admin-friend-links')
+    expect(route.path).toBe('/admin/friend-links')
+    expect(route.meta.roles).toEqual(['ADMIN'])
+  })
+
+  it('包含公众端友情链接页 /links（匿名可访问，issue #17）', () => {
+    expect(router.hasRoute('friend-links')).toBe(true)
+    const route = router.getRoutes().find(r => r.name === 'friend-links')
+    expect(route.path).toBe('/links')
+    expect(route.meta.public).toBe(true)
+  })
 })

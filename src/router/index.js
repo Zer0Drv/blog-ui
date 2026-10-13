@@ -25,6 +25,8 @@ const routes = [
       // P0 阅读侧：归档/全文搜索（公开，组件由 frontend-E 提供）
       { path: 'archives', name: 'archives', component: () => import('../views/ArchivesView.vue'), meta: { public: true, title: '归档' } },
       { path: 'search', name: 'search', component: () => import('../views/SearchView.vue'), meta: { public: true, title: '搜索' } },
+      // P1 友情链接公开页（issue #17）
+      { path: 'links', name: 'friend-links', component: () => import('../views/FriendLinksView.vue'), meta: { public: true, title: '友情链接' } },
       { path: 'my/articles', name: 'my-articles', component: () => import('../views/MyArticlesView.vue'), meta: { roles: ROLE_GROUPS.WRITERS, title: '我的文章' } },
       { path: 'my/favorites', name: 'my-favorites', component: () => import('../views/MyFavoritesView.vue'), meta: { title: '我的收藏' } },
       // P0 作者侧：附件库（需登录，组件由 frontend-D 提供）
@@ -52,7 +54,9 @@ const routes = [
       { path: 'sensitive-words', name: 'admin-sensitive-words', component: () => import('../views/admin/AdminSensitiveWords.vue'), meta: { roles: [ROLES.ADMIN], title: '敏感词库 - 管理后台' } },
       { path: 'taxonomy', name: 'admin-taxonomy', component: () => import('../views/admin/AdminTaxonomy.vue'), meta: { roles: [ROLES.ADMIN], title: '标签分类 - 管理后台' } },
       { path: 'users', name: 'admin-users', component: () => import('../views/admin/AdminUsers.vue'), meta: { roles: [ROLES.ADMIN], title: '用户管理 - 管理后台' } },
-      { path: 'site', name: 'admin-site', component: () => import('../views/admin/AdminSite.vue'), meta: { roles: [ROLES.ADMIN], title: '站点设置 - 管理后台' } }
+      { path: 'site', name: 'admin-site', component: () => import('../views/admin/AdminSite.vue'), meta: { roles: [ROLES.ADMIN], title: '站点设置 - 管理后台' } },
+      // P1 友情链接管理（issue #17）
+      { path: 'friend-links', name: 'admin-friend-links', component: () => import('../views/admin/AdminFriendLinks.vue'), meta: { roles: [ROLES.ADMIN], title: '友情链接 - 管理后台' } }
     ]
   },
   { path: '/:pathMatch(.*)*', redirect: '/' }
