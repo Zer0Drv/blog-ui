@@ -41,6 +41,11 @@ describe('router 页签标题（afterEach）', () => {
     await router.push('/article/1')
     expect(document.title).toBe('文章详情 - Blog')
   })
+  it('自定义页面公开可访问并设置占位标题', async () => {
+    await router.push('/pages/about')
+    expect(router.currentRoute.value.name).toBe('page-detail')
+    expect(document.title).toBe('页面 - Blog')
+  })
 
   it('未知路径重定向到首页后套用首页标题', async () => {
     await router.push('/no-such-page')

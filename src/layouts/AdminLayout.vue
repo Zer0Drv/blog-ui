@@ -18,6 +18,10 @@
           <el-icon><Document /></el-icon>
           <span>文章管理</span>
         </el-menu-item>
+        <el-menu-item index="/admin/pages">
+          <el-icon><Document /></el-icon>
+          <span>页面管理</span>
+        </el-menu-item>
         <el-menu-item index="/admin/comments">
           <el-icon><ChatDotSquare /></el-icon>
           <span>评论治理</span>
@@ -52,7 +56,7 @@
         <el-button @click="router.push('/')">返回前台</el-button>
       </header>
       <main class="content">
-        <router-view />
+        <router-view :key="$route.path" />
       </main>
     </div>
   </div>
@@ -69,6 +73,7 @@ const router = useRouter()
 const titles = {
   '/admin': '仪表盘',
   '/admin/articles': '文章管理',
+  '/admin/pages': '页面管理',
   '/admin/comments': '评论治理',
   '/admin/sensitive-words': '敏感词库',
   '/admin/users': '用户管理',

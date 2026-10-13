@@ -1,0 +1,20 @@
+import { expect, it, vi } from 'vitest'
+const http = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() }))
+vi.mock('../http', () => ({ default: http }))
+import { getPage, getPageNavigation, getAdminPage, listAdminPages, createPage, updatePage, deletePage } from '../page'
+it('公众读取与管理写入使用独立页面路径', async () => {
+  await getPage('about')
+  expect(http.get).toHaveBeenLastCalledWith('/pages/about')
+  await getPageNavigation()
+  expect(http.get).toHaveBeenLastCalledWith('/site/page-navigation')
+  await listAdminPages({ page: 1 })
+  expect(http.get).toHaveBeenLastCalledWith('/admin/pages', { params: { page: 1 } })
+  await getAdminPage(7)
+  expect(http.get).toHaveBeenLastCalledWith('/admin/pages/7')
+  await createPage({ title: '关于' })
+  expect(http.post).toHaveBeenLastCalledWith('/admin/pages', { title: '关于' })
+  await updatePage(7, { title: '更新' })
+  expect(http.put).toHaveBeenLastCalledWith('/admin/pages/7', { title: '更新' })
+  await deletePage(7)
+  expect(http.delete).toHaveBeenLastCalledWith('/admin/pages/7')
+})
