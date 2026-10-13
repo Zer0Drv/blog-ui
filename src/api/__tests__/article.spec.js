@@ -10,7 +10,16 @@ const http = {
 
 vi.mock('../http', () => ({ default: http }))
 
-const { exportArticle, exportArticlesZip, importArticle, getArticleBySlug } = await import('../article')
+const { exportArticle, exportArticlesZip, importArticle, getArticleBySlug, getArticle, verifyArticlePassword } = await import('../article')
+
+it('文章访问令牌仅在详情请求头传递，口令经 POST 校验', async () => {
+  await getArticle(7, 'grant')
+  expect(http.get).toHaveBeenLastCalledWith('/articles/7', { headers: { 'X-Article-Access-Token': 'grant' } })
+  await getArticleBySlug('secret-post', 'grant')
+  expect(http.get).toHaveBeenLastCalledWith('/articles/slug/secret-post', { headers: { 'X-Article-Access-Token': 'grant' } })
+  await verifyArticlePassword(7, { password: 'secret' })
+  expect(http.post).toHaveBeenLastCalledWith('/articles/7/password', { password: 'secret' })
+})
 
 describe('article 导入导出 api', () => {
   beforeEach(() => {

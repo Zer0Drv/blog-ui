@@ -3,7 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import ElementPlus, { ElMessage } from 'element-plus'
 import ArticleEditView from '../ArticleEditView.vue'
-import { exportArticle, getArticle, getAutosave, importArticle } from '../../api/article'
+import { exportArticle, getArticle, getAutosave, importArticle, updateArticle } from '../../api/article'
 import { useAuthStore } from '../../stores/auth'
 
 const routerPush = vi.hoisted(() => vi.fn())
@@ -132,6 +132,30 @@ describe('ArticleEditView 导入/导出入口（Zer0Drv/blog#16）', () => {
 
     expect(importArticle).not.toHaveBeenCalled()
     expect(ElMessage.error).toHaveBeenCalledWith('仅支持 .md/.markdown/.txt/.html/.htm/.zip 文件')
+    wrapper.unmount()
+  })
+
+  it('保存口令文章保留原口令，切换私密后提交 PRIVATE', async () => {
+    routeParams.id = '42'
+    getArticle.mockResolvedValue({
+      id: 42, title: '密码文章', editorType: 'MARKDOWN', content: '# 正文',
+      status: 'DRAFT', visibility: 'PASSWORD', author: { id: 7 }
+    })
+    getAutosave.mockResolvedValue({ exists: false })
+    updateArticle.mockResolvedValue(undefined)
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.find('input[type="password"]').attributes('placeholder')).toContain('保留原口令')
+    await actionButton(wrapper, '保存草稿').trigger('click')
+    await flushPromises()
+    expect(updateArticle).toHaveBeenLastCalledWith('42', expect.objectContaining({ visibility: 'PASSWORD' }))
+    expect(updateArticle.mock.lastCall[1]).not.toHaveProperty('accessPassword')
+    const privateRadio = wrapper.findAll('input[type="radio"]').find(r => r.element.value === 'PRIVATE')
+    await privateRadio.setValue(true)
+    await actionButton(wrapper, '保存草稿').trigger('click')
+    await flushPromises()
+    expect(updateArticle).toHaveBeenLastCalledWith('42', expect.objectContaining({ visibility: 'PRIVATE' }))
+    expect(wrapper.find('input[type="password"]').exists()).toBe(false)
     wrapper.unmount()
   })
 })

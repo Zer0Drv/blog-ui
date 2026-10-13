@@ -5,13 +5,22 @@ export function pageArticles(params) {
   return http.get('/articles', { params })
 }
 
-export function getArticle(id) {
-  return http.get(`/articles/${id}`)
+export function getArticle(id, accessToken) {
+  return accessToken
+    ? http.get(`/articles/${id}`, { headers: { 'X-Article-Access-Token': accessToken } })
+    : http.get(`/articles/${id}`)
 }
 
 // 按 slug 取文章详情（公开；Zer0Drv/blog#14 固定链接，与 id 详情并存）
-export function getArticleBySlug(slug) {
-  return http.get(`/articles/slug/${encodeURIComponent(slug)}`)
+export function getArticleBySlug(slug, accessToken) {
+  const url = `/articles/slug/${encodeURIComponent(slug)}`
+  return accessToken
+    ? http.get(url, { headers: { 'X-Article-Access-Token': accessToken } })
+    : http.get(url)
+}
+
+export function verifyArticlePassword(id, data) {
+  return http.post(`/articles/${id}/password`, data)
 }
 
 // 写作接口（ADMIN / AUTHOR）

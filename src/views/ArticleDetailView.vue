@@ -1,6 +1,16 @@
 <template>
   <div class="detail" :class="{ 'with-toc': hasToc }">
     <el-skeleton v-if="loading" :rows="10" animated />
+    <el-card v-else-if="article?.passwordRequired" class="password-gate">
+      <h1>这篇文章需要访问口令</h1>
+      <p>请输入作者提供的口令以阅读全文。</p>
+      <form @submit.prevent="unlockArticle">
+        <el-input v-model="accessPassword" type="password" show-password maxlength="64"
+          autocomplete="off" aria-label="访问口令" placeholder="请输入访问口令" />
+        <CaptchaInput v-if="captchaRequired" ref="captchaRef" v-model="captcha" scene="article-password" />
+        <el-button native-type="submit" type="primary" :loading="unlocking">解锁文章</el-button>
+      </form>
+    </el-card>
     <template v-else-if="article">
       <div class="content-wrap">
         <div class="main-col">
@@ -36,7 +46,7 @@
             </el-button>
           </template>
           <!-- 导出：公开文章任何人可导出（契约同详情可见性），格式按编辑器类型 -->
-          <el-button size="small" link :loading="exporting" @click="onExport">导出</el-button>
+          <el-button v-if="canManage || article.visibility === 'PUBLIC' || !article.visibility" size="small" link :loading="exporting" @click="onExport">导出</el-button>
         </div>
         <img v-if="article.cover" :src="resolveUploadUrl(article.cover)" class="cover" alt="cover" />
         <el-divider />
@@ -51,7 +61,7 @@
         <div v-else ref="richtextRef" class="richtext" v-html="sanitizedContent" />
 
         <!-- M3 互动栏：浏览量/点赞/收藏/评论数 -->
-        <div class="interaction-bar">
+        <div v-if="!article.visibility || article.visibility === 'PUBLIC'" class="interaction-bar">
           <span class="stat">
             <el-icon><View /></el-icon>
             {{ article.viewCount || 0 }} 浏览
@@ -83,7 +93,7 @@
         </div>
       </el-card>
 
-          <CommentSection :article-id="article.id" @change="onCommentChange" />
+          <CommentSection v-if="!article.visibility || article.visibility === 'PUBLIC'" :article-id="article.id" @change="onCommentChange" />
         </div>
 
         <!-- P0 目录：宽屏（≥1100px）右侧 sticky，窄屏由 CSS order 收起到正文上方；无标题不渲染 -->
@@ -111,12 +121,12 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { MdCatalog } from 'md-editor-v3'
 import { ElMessage } from 'element-plus'
 import { View, Pointer, Star, ChatDotRound } from '@element-plus/icons-vue'
-import { getArticle, getArticleBySlug, exportArticle } from '../api/article'
+import { getArticle, getArticleBySlug, exportArticle, verifyArticlePassword } from '../api/article'
 import { likeArticle, unlikeArticle, favoriteArticle, unfavoriteArticle } from '../api/interaction'
 import { follow, unfollow, getUserProfile } from '../api/social'
 import { resolveUploadUrl } from '../api/upload'
@@ -125,6 +135,7 @@ import { useAuthStore } from '../stores/auth'
 import { useDocumentTitle } from '../composables/useDocumentTitle'
 import CommentSection from '../components/CommentSection.vue'
 import MdContentPreview from '../components/MdContentPreview.vue'
+import CaptchaInput from '../components/CaptchaInput.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -136,8 +147,32 @@ const { setTitle } = useDocumentTitle()
 const article = ref(null)
 const loading = ref(true)
 // slug 固定链接路由（Zer0Drv/blog#14）与 id 路由共用本组件：按路由参数分流取数
-const routeSlug = route.params.slug || ''
-const previewId = `preview-${route.params.id || routeSlug}`
+const previewId = computed(() => `preview-${route.params.id || route.params.slug}`)
+const accessPassword = ref('')
+const accessToken = ref('')
+const unlocking = ref(false)
+const captchaRequired = ref(false)
+const captchaRef = ref(null)
+const captcha = ref({ captchaId: '', captchaCode: '' })
+// 令牌仅驻留当前页面内存，离开或切换文章即清除。
+let loadSequence = 0
+
+async function unlockArticle() {
+  if (!accessPassword.value) { ElMessage.warning('请输入访问口令'); return }
+  const sequence = loadSequence
+  unlocking.value = true
+  try {
+    const grant = await verifyArticlePassword(article.value.id, { password: accessPassword.value, ...captcha.value })
+    if (sequence !== loadSequence) return
+    accessToken.value = grant.accessToken
+    accessPassword.value = ''
+    await loadArticle()
+  } catch (e) {
+    if (sequence !== loadSequence) return
+    if (String(e.code) === '40066') captchaRequired.value = true
+    captchaRef.value?.refresh()
+  } finally { unlocking.value = false }
+}
 
 // #9：RICHTEXT 正文渲染前经 DOMPurify 消毒，杜绝 <img onerror> / <script> 等存储型 XSS
 const sanitizedContent = computed(() => sanitizeHtml(article.value?.content || ''))
@@ -292,25 +327,45 @@ async function toggleFollowAuthor() {
   }
 }
 
-onMounted(async () => {
+async function loadArticle() {
+  const sequence = ++loadSequence
+  loading.value = true
+  article.value = null
+  mdCatalogList.value = []
+  tocItems.value = []
+  setTitle('文章详情')
   try {
-    article.value = routeSlug
-      ? await getArticleBySlug(routeSlug)
-      : await getArticle(route.params.id)
-    setTitle(article.value?.title)
+    const loaded = route.params.slug
+      ? await getArticleBySlug(route.params.slug, accessToken.value)
+      : await getArticle(route.params.id, accessToken.value)
+    if (sequence !== loadSequence) return
+    article.value = loaded
+    setTitle(article.value?.passwordRequired ? '文章需要访问口令' : article.value?.title)
     loadAuthorFollowState()
     // 富文本：等 v-html 渲染完成后再提取目录（MARKDOWN 由 MdCatalog 自动联动）
-    if (article.value && article.value.editorType !== 'MARKDOWN') {
+    loading.value = false
+    if (article.value && !article.value.passwordRequired && article.value.editorType !== 'MARKDOWN') {
       await nextTick()
       buildRichtextToc()
     }
   } catch { /* 拦截器已提示 */ } finally {
-    loading.value = false
+    if (sequence === loadSequence) loading.value = false
   }
+}
+onMounted(loadArticle)
+watch(() => [route.params.id, route.params.slug], () => {
+  accessToken.value = ''
+  accessPassword.value = ''
+  captchaRequired.value = false
+  captcha.value = { captchaId: '', captchaCode: '' }
+  loadArticle()
 })
 </script>
 
 <style scoped>
+.password-gate { max-width: 480px; margin: 40px auto; }
+.password-gate h1 { font-size: 22px; }
+.password-gate form { display: grid; gap: 16px; }
 .detail {
   max-width: 860px;
   margin: 0 auto;
