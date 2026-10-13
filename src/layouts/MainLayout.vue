@@ -6,6 +6,7 @@
         <nav class="nav">
           <router-link to="/" class="nav-link">首页</router-link>
           <router-link to="/archives" class="nav-link">归档</router-link>
+          <router-link v-for="page in pageNavigation" :key="page.id" :to="`/pages/${page.slug}`" class="nav-link">{{ page.title }}</router-link>
           <router-link v-if="auth.isLoggedIn" to="/feed" class="nav-link">动态</router-link>
         </nav>
         <div class="spacer" />
@@ -81,7 +82,7 @@
 
 <script setup>
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ArrowDown, Bell, Search } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
 import { useRealtimeTopic } from '../composables/useRealtimeTopic'
@@ -90,9 +91,26 @@ import { resolveUploadUrl } from '../api/upload'
 import { onProfileUpdated } from '../utils/profileSync'
 import { onUnreadChanged } from '../utils/unreadSync'
 import { ensureSiteConfig, useSiteConfig } from '../composables/useSiteConfig'
+import { getPageNavigation } from '../api/page'
 
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
+const pageNavigation = ref([])
+let navigationSequence = 0
+async function refreshPageNavigation() {
+  const sequence = ++navigationSequence
+  try {
+    const links = await getPageNavigation()
+    if (sequence === navigationSequence) pageNavigation.value = links || []
+  } catch { if (sequence === navigationSequence) pageNavigation.value = [] }
+}
+onMounted(() => {
+  refreshPageNavigation()
+  window.addEventListener('page-navigation-changed', refreshPageNavigation)
+})
+onUnmounted(() => window.removeEventListener('page-navigation-changed', refreshPageNavigation))
+watch(() => route.path, refreshPageNavigation)
 
 // P0 搜索框：回车跳搜索页
 const searchKeyword = ref('')
@@ -200,11 +218,20 @@ async function onCommand(cmd) {
 .nav {
   display: flex;
   gap: 16px;
+  min-width: 0;
+  max-width: 45%;
+  overflow-x: auto;
+  align-items: center;
 }
 .nav-link {
   color: #606266;
   text-decoration: none;
   font-size: 14px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .nav-link.router-link-active {
   color: #409eff;
@@ -242,6 +269,8 @@ async function onCommand(cmd) {
   width: 200px;
 }
 @media (max-width: 768px) {
+  .topbar-inner { height: auto; min-height: 56px; flex-wrap: wrap; padding-top: 8px; }
+  .nav { order: 3; flex-basis: 100%; max-width: 100%; padding-bottom: 10px; }
   .search-input {
     display: none;
   }

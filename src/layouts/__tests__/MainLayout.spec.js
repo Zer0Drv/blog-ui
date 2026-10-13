@@ -7,6 +7,7 @@ import { useAuthStore } from '../../stores/auth'
 import { notifyProfileUpdated } from '../../utils/profileSync'
 import { notifyUnreadChanged } from '../../utils/unreadSync'
 import { getUnreadCount } from '../../api/notification'
+import { getPageNavigation } from '../../api/page'
 
 // 捕获 realtime.on 注册的回调，用于模拟 WS 推送
 const listeners = vi.hoisted(() => ({}))
@@ -33,6 +34,7 @@ vi.mock('../../api/notification', () => ({
 vi.mock('../../api/site', () => ({
   getSiteConfig: vi.fn().mockResolvedValue({})
 }))
+vi.mock('../../api/page', () => ({ getPageNavigation: vi.fn().mockResolvedValue([]) }))
 
 function mountLayout() {
   const pinia = createPinia()
@@ -136,6 +138,18 @@ describe('MainLayout', () => {
     listeners.private_message({ id: 1, senderId: 2 })
     await flushPromises()
     expect(getUnreadCount).toHaveBeenCalledTimes(1)
+    wrapper.unmount()
+  })
+  it('展示公开页面导航，发布/下架事件后刷新入口', async () => {
+    getPageNavigation.mockResolvedValueOnce([{ id: 7, slug: 'about', title: '关于' }])
+    const { wrapper } = mountLayout()
+    await flushPromises()
+    const link = wrapper.findAllComponents(RouterLinkStub).find(link => link.props('to') === '/pages/about')
+    expect(link.text()).toBe('关于')
+    getPageNavigation.mockResolvedValueOnce([])
+    window.dispatchEvent(new Event('page-navigation-changed'))
+    await flushPromises()
+    expect(wrapper.findAllComponents(RouterLinkStub).some(link => link.props('to') === '/pages/about')).toBe(false)
     wrapper.unmount()
   })
 })
