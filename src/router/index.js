@@ -16,7 +16,12 @@ const routes = [
     children: [
       { path: '', name: 'home', component: () => import('../views/HomeView.vue'), meta: { public: true, title: '首页' } },
       // 标题由详情加载后覆盖为文章标题（useDocumentTitle）
-      { path: 'article/:id', name: 'article-detail', component: () => import('../views/ArticleDetailView.vue'), meta: { public: true, title: '文章详情' } },
+      // id 路由限定纯数字（旧链接不破坏），slug 固定链接走下方变体（Zer0Drv/blog#14）
+      { path: 'article/:id(\\d+)', name: 'article-detail', component: () => import('../views/ArticleDetailView.vue'), meta: { public: true, title: '文章详情' } },
+      // slug 固定链接详情：与 id 路由同一组件，按 route.params 分流。
+      // 两条路由都带参数正则（得分相同），定义顺序决胜：/article/123 先命中 id 路由；
+      // 非法形态（大写/下划线/首尾连字符）由后端报不存在兜底，与错误 id 的体验一致
+      { path: 'article/:slug([a-z0-9-]+)', name: 'article-detail-slug', component: () => import('../views/ArticleDetailView.vue'), meta: { public: true, title: '文章详情' } },
       // P0 阅读侧：归档/全文搜索（公开，组件由 frontend-E 提供）
       { path: 'archives', name: 'archives', component: () => import('../views/ArchivesView.vue'), meta: { public: true, title: '归档' } },
       { path: 'search', name: 'search', component: () => import('../views/SearchView.vue'), meta: { public: true, title: '搜索' } },

@@ -116,7 +116,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { MdCatalog } from 'md-editor-v3'
 import { ElMessage } from 'element-plus'
 import { View, Pointer, Star, ChatDotRound } from '@element-plus/icons-vue'
-import { getArticle, exportArticle } from '../api/article'
+import { getArticle, getArticleBySlug, exportArticle } from '../api/article'
 import { likeArticle, unlikeArticle, favoriteArticle, unfavoriteArticle } from '../api/interaction'
 import { follow, unfollow, getUserProfile } from '../api/social'
 import { resolveUploadUrl } from '../api/upload'
@@ -135,7 +135,9 @@ const { setTitle } = useDocumentTitle()
 
 const article = ref(null)
 const loading = ref(true)
-const previewId = `preview-${route.params.id}`
+// slug 固定链接路由（Zer0Drv/blog#14）与 id 路由共用本组件：按路由参数分流取数
+const routeSlug = route.params.slug || ''
+const previewId = `preview-${route.params.id || routeSlug}`
 
 // #9：RICHTEXT 正文渲染前经 DOMPurify 消毒，杜绝 <img onerror> / <script> 等存储型 XSS
 const sanitizedContent = computed(() => sanitizeHtml(article.value?.content || ''))
@@ -292,7 +294,9 @@ async function toggleFollowAuthor() {
 
 onMounted(async () => {
   try {
-    article.value = await getArticle(route.params.id)
+    article.value = routeSlug
+      ? await getArticleBySlug(routeSlug)
+      : await getArticle(route.params.id)
     setTitle(article.value?.title)
     loadAuthorFollowState()
     // 富文本：等 v-html 渲染完成后再提取目录（MARKDOWN 由 MdCatalog 自动联动）

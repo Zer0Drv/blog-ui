@@ -30,7 +30,7 @@
           :key="a.id"
           class="article-card"
           shadow="hover"
-          @click="goDetail(a.id)"
+          @click="goDetail(a)"
         >
           <div class="card-body">
             <img v-if="a.cover" :src="resolveUploadUrl(a.cover)" class="cover" alt="cover" />
@@ -70,6 +70,7 @@ import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'
 import { searchArticles } from '../api/browse'
+import { articlePath } from '../utils/articleLink'
 import { resolveUploadUrl } from '../api/upload'
 
 const route = useRoute()
@@ -120,8 +121,8 @@ watch(
   { immediate: true }
 )
 
-function goDetail(id) {
-  router.push(`/article/${id}`)
+function goDetail(article) {
+  router.push(articlePath(article))
 }
 
 function formatTime(t) {

@@ -38,6 +38,10 @@
             <el-link type="primary" @click="router.push(`/article/${row.id}`)">{{ row.title }}</el-link>
           </template>
         </el-table-column>
+        <!-- slug 固定链接（Zer0Drv/blog#14）：管理端只读展示，编辑在编辑器页 -->
+        <el-table-column label="Slug" min-width="140" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.slug || '-' }}</template>
+        </el-table-column>
         <el-table-column label="作者" width="110" show-overflow-tooltip>
           <template #default="{ row }">
             {{ row.author?.nickname || row.author?.username || row.authorNickname || '-' }}

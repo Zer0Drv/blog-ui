@@ -15,6 +15,14 @@
             placeholder="留空则自动截取正文前 200 字"
           />
         </el-form-item>
+        <!-- 固定链接（Zer0Drv/blog#14）：留空由后端按标题自动生成；编辑留空保持现状 -->
+        <el-form-item label="固定链接（slug）">
+          <el-input
+            v-model="form.slug"
+            maxlength="200"
+            placeholder="留空自动生成；仅小写字母、数字与连字符，如 my-first-post"
+          />
+        </el-form-item>
         <div class="row">
           <el-form-item label="封面" class="row-item">
             <div class="cover-box">
@@ -167,6 +175,7 @@ const coverUploading = ref(false)
 const form = reactive({
   title: '',
   summary: '',
+  slug: '',
   cover: '',
   categoryId: null,
   tagIds: [],
@@ -265,6 +274,8 @@ async function onSave(status, publishTime) {
       content,
       editorType: form.editorType,
       summary: form.summary,
+      // slug 固定链接： trim 后随保存提交；留空新建自动生成 / 编辑保持现状（后端口径）
+      slug: form.slug.trim(),
       cover: form.cover,
       categoryId: form.categoryId || null,
       tagIds: form.tagIds,
@@ -352,6 +363,7 @@ function fillArticle(a) {
   const s = articleToFormState(a)
   form.title = s.title
   form.summary = s.summary
+  form.slug = s.slug
   form.cover = s.cover
   form.categoryId = s.categoryId
   form.tagIds = s.tagIds

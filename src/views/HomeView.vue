@@ -22,7 +22,7 @@
           :key="a.id"
           class="article-card"
           shadow="hover"
-          @click="goDetail(a.id)"
+          @click="goDetail(a)"
         >
           <div class="card-body">
             <img v-if="a.cover" :src="resolveUploadUrl(a.cover)" class="cover" alt="cover" />
@@ -108,6 +108,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { pageArticles } from '../api/article'
+import { articlePath } from '../utils/articleLink'
 import { listCategories } from '../api/category'
 import { listTags } from '../api/tag'
 import { resolveUploadUrl } from '../api/upload'
@@ -164,8 +165,8 @@ function onCategoryFilter(id) {
   load()
 }
 
-function goDetail(id) {
-  router.push(`/article/${id}`)
+function goDetail(article) {
+  router.push(articlePath(article))
 }
 
 function formatTime(t) {

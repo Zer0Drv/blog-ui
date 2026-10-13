@@ -9,6 +9,11 @@ export function getArticle(id) {
   return http.get(`/articles/${id}`)
 }
 
+// 按 slug 取文章详情（公开；Zer0Drv/blog#14 固定链接，与 id 详情并存）
+export function getArticleBySlug(slug) {
+  return http.get(`/articles/slug/${encodeURIComponent(slug)}`)
+}
+
 // 写作接口（ADMIN / AUTHOR）
 export function createArticle(data) {
   return http.post('/articles', data)

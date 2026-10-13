@@ -90,6 +90,22 @@ describe('validateArticle', () => {
   it('标题正文齐全 → ok', () => {
     expect(validateArticle({ title: 't' }, '正文')).toEqual({ ok: true })
   })
+
+  it('slug 固定链接：留空合法，非法格式拦截，合法放行', () => {
+    // 留空 / 空白 → 后端自动生成或保持现状
+    expect(validateArticle({ title: 't' }, '正文')).toEqual({ ok: true })
+    expect(validateArticle({ title: 't', slug: '' }, '正文')).toEqual({ ok: true })
+    expect(validateArticle({ title: 't', slug: '  ' }, '正文')).toEqual({ ok: true })
+    // 合法形态
+    expect(validateArticle({ title: 't', slug: 'my-first-post' }, '正文')).toEqual({ ok: true })
+    expect(validateArticle({ title: 't', slug: 'post-42' }, '正文')).toEqual({ ok: true })
+    // 非法形态：大写 / 下划线 / 首尾连字符 / 中文
+    for (const slug of ['Hello', 'my_post', '-lead', 'trail-', '中文slug', 'a--b']) {
+      const r = validateArticle({ title: 't', slug }, '正文')
+      expect(r.ok).toBe(false)
+      expect(r.message).toContain('slug')
+    }
+  })
 })
 
 describe('needsSwitchConfirm 四象限', () => {
@@ -231,6 +247,7 @@ describe('articleToFormState', () => {
     expect(s).toEqual({
       title: '',
       summary: '',
+      slug: '',
       cover: '',
       categoryId: null,
       tagIds: [],
@@ -240,6 +257,11 @@ describe('articleToFormState', () => {
     })
     const withTags = articleToFormState({ tags: [{ id: 1 }, { id: 2 }], editorType: 'MARKDOWN', content: '# x' })
     expect(withTags.tagIds).toEqual([1, 2])
+  })
+
+  it('slug 固定链接回填（Zer0Drv/blog#14）', () => {
+    expect(articleToFormState({ slug: 'my-post' }).slug).toBe('my-post')
+    expect(articleToFormState({}).slug).toBe('')
   })
 
   it('MARKDOWN 文章正文进 md 槽位', () => {

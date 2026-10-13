@@ -64,7 +64,7 @@
         :key="a.id"
         class="article-card"
         shadow="hover"
-        @click="router.push(`/article/${a.id}`)"
+        @click="router.push(articlePath(a))"
       >
         <div class="card-body">
           <img v-if="a.cover" :src="resolveUploadUrl(a.cover)" class="cover" alt="cover" />
@@ -102,6 +102,7 @@ import { getUserProfile, follow, unfollow, pageUserArticles, listFollowers, list
 import { resolveUploadUrl } from '../api/upload'
 import { useAuthStore } from '../stores/auth'
 import { onProfileUpdated } from '../utils/profileSync'
+import { articlePath } from '../utils/articleLink'
 import { useDocumentTitle } from '../composables/useDocumentTitle'
 
 const route = useRoute()

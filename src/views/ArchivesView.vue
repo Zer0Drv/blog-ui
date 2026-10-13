@@ -19,7 +19,7 @@
             v-for="a in m.articles || []"
             :key="a.id"
             class="archive-item"
-            @click="router.push(`/article/${a.id}`)"
+            @click="router.push(articlePath(a))"
           >
             <span class="date">{{ formatDay(a.publishTime) }}</span>
             <span class="name">{{ a.title }}</span>
@@ -35,6 +35,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Calendar } from '@element-plus/icons-vue'
 import { getArchives } from '../api/browse'
+import { articlePath } from '../utils/articleLink'
 
 const router = useRouter()
 

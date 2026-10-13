@@ -45,6 +45,12 @@ export function buildAutosaveBody(form, content) {
 export function validateArticle(form, content) {
   if (!form.title.trim()) return { ok: false, message: '请填写标题' }
   if (!stripHtml(content).trim()) return { ok: false, message: '正文不能为空' }
+  // slug 固定链接（Zer0Drv/blog#14）：留空合法（后端自动生成/保持现状），
+  // 非空先按格式拦截一轮，唯一性冲突由后端业务码提示
+  const slug = (form.slug || '').trim()
+  if (slug && !SLUG_PATTERN.test(slug)) {
+    return { ok: false, message: 'slug 仅允许小写字母、数字与连字符（如 my-first-post）' }
+  }
   return { ok: true }
 }
 
@@ -104,6 +110,9 @@ export function draftToFormPatch(draft) {
   return patch
 }
 
+// slug 固定链接格式（与后端 ArticleSlugger 口径一致：小写字母/数字段 + 段间单连字符）
+export const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/
+
 // 文章 → 表单状态。editorType 缺省兜底 'MARKDOWN'；
 // 正文槽位沿用现状对原始值 a.editorType 的判断（仅严格等于 'MARKDOWN' 进 md 槽，
 // 其余——包括 editorType 缺失——进 html 槽），未命中的槽位为 null 表示不动。
@@ -112,6 +121,7 @@ export function articleToFormState(a) {
   return {
     title: a.title || '',
     summary: a.summary || '',
+    slug: a.slug || '',
     cover: a.cover || '',
     categoryId: a.categoryId || null,
     tagIds: (a.tags || []).map(t => t.id),
