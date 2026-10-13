@@ -50,6 +50,12 @@ describe('formatClock', () => {
 })
 
 describe('buildAutosaveBody', () => {
+  it('草稿保留可见性选择并排除明文口令', () => {
+    const body = buildAutosaveBody({ title: 't', visibility: 'PRIVATE', accessPassword: 'secret' }, '正文')
+    expect(body.visibility).toBe('PRIVATE')
+    expect(body).not.toHaveProperty('accessPassword')
+    expect(draftToFormPatch(body).visibility).toBe('PRIVATE')
+  })
   const form = {
     title: '  标题  ',
     summary: '摘要',
@@ -242,6 +248,14 @@ describe('draftToFormPatch', () => {
 })
 
 describe('articleToFormState', () => {
+  it('口令不回填明文，已有保护文章可保留原口令', () => {
+    const state = articleToFormState({ visibility: 'PASSWORD' })
+    expect(state.hasAccessPassword).toBe(true)
+    expect(state.accessPassword).toBe('')
+    expect(validateArticle({ ...state, title: 't' }, '正文').ok).toBe(true)
+    expect(validateArticle({ title: 't', visibility: 'PASSWORD' }, '正文').ok).toBe(false)
+    expect(validateArticle({ title: 't', visibility: 'PASSWORD', accessPassword: '密'.repeat(25) }, '正文').ok).toBe(false)
+  })
   it('字段兜底与 tags → tagIds 映射', () => {
     const s = articleToFormState({})
     expect(s).toEqual({
@@ -253,6 +267,9 @@ describe('articleToFormState', () => {
       tagIds: [],
       editorType: 'MARKDOWN',
       mdContent: null,
+      visibility: 'PUBLIC',
+      hasAccessPassword: false,
+      accessPassword: '',
       htmlContent: ''
     })
     const withTags = articleToFormState({ tags: [{ id: 1 }, { id: 2 }], editorType: 'MARKDOWN', content: '# x' })

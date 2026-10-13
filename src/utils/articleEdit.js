@@ -37,7 +37,8 @@ export function buildAutosaveBody(form, content) {
     content,
     summary: form.summary,
     cover: form.cover,
-    categoryId: form.categoryId || null
+    categoryId: form.categoryId || null,
+    ...(form.visibility ? { visibility: form.visibility } : {})
   }
 }
 
@@ -50,6 +51,13 @@ export function validateArticle(form, content) {
   const slug = (form.slug || '').trim()
   if (slug && !SLUG_PATTERN.test(slug)) {
     return { ok: false, message: 'slug 仅允许小写字母、数字与连字符（如 my-first-post）' }
+  }
+  if (form.visibility === 'PASSWORD') {
+    const password = form.accessPassword || ''
+    if (!password && !form.hasAccessPassword) return { ok: false, message: '请设置访问口令' }
+    if (password && (password.length < 4 || password.length > 64 || new TextEncoder().encode(password).length > 72)) {
+      return { ok: false, message: '访问口令需为 4~64 个字符，且 UTF-8 编码不超过 72 字节' }
+    }
   }
   return { ok: true }
 }
@@ -105,6 +113,7 @@ export function draftToFormPatch(draft) {
   if (draft.title != null) patch.title = draft.title
   if (draft.summary != null) patch.summary = draft.summary
   if (draft.cover != null) patch.cover = draft.cover
+  if (['PUBLIC', 'PASSWORD', 'PRIVATE'].includes(draft.visibility)) patch.visibility = draft.visibility
   if (draft.categoryId !== undefined) patch.categoryId = draft.categoryId || null
   if (draft.content != null) patch.content = draft.content
   return patch
@@ -126,6 +135,9 @@ export function articleToFormState(a) {
     categoryId: a.categoryId || null,
     tagIds: (a.tags || []).map(t => t.id),
     editorType: a.editorType || 'MARKDOWN',
+    visibility: a.visibility || 'PUBLIC',
+    hasAccessPassword: a.visibility === 'PASSWORD',
+    accessPassword: '',
     mdContent: toMd ? a.content || '' : null,
     htmlContent: toMd ? null : a.content || ''
   }

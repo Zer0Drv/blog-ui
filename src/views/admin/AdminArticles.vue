@@ -58,6 +58,9 @@
             <el-tag :type="statusType(row.status)" size="small">{{ statusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="可见性" width="100">
+          <template #default="{ row }">{{ { PUBLIC: '公开', PASSWORD: '密码保护', PRIVATE: '私密' }[row.visibility] || '公开' }}</template>
+        </el-table-column>
         <el-table-column label="置顶" width="70" align="center">
           <template #default="{ row }">
             <el-switch

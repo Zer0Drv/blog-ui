@@ -58,6 +58,17 @@
           </el-form-item>
         </div>
 
+        <el-form-item label="可见性">
+          <el-radio-group v-model="form.visibility" @change="form.accessPassword = ''">
+            <el-radio value="PUBLIC">公开</el-radio>
+            <el-radio value="PASSWORD">密码保护</el-radio>
+            <el-radio value="PRIVATE">私密（仅作者和管理员）</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="form.visibility === 'PASSWORD'" label="访问口令" :required="!form.hasAccessPassword">
+          <el-input v-model="form.accessPassword" type="password" show-password maxlength="64"
+            autocomplete="new-password" :placeholder="form.hasAccessPassword ? '留空保留原口令；填写则更换口令' : '设置 4~64 个字符的访问口令'" />
+        </el-form-item>
         <el-form-item label="编辑模式">
           <el-radio-group
             v-model="form.editorType"
@@ -191,7 +202,10 @@ const form = reactive({
   cover: '',
   categoryId: null,
   tagIds: [],
-  editorType: 'MARKDOWN'
+  editorType: 'MARKDOWN',
+  visibility: 'PUBLIC',
+  accessPassword: '',
+  hasAccessPassword: false
 })
 const mdContent = ref('')
 const htmlContent = ref('')
@@ -254,7 +268,7 @@ const autosaveTip = autosave.tip
 // 初始填充（onMounted）不触发计时；版本恢复 reloadArticle→fillArticle 的回填会触发，
 // 由 reloadArticle 在回填后调 autosave.markClean() 复位（useArticleAutosave.spec 行为锁锁定）
 watch(
-  [() => form.title, () => form.summary, () => form.cover, () => form.categoryId, mdContent, htmlContent],
+  [() => form.title, () => form.summary, () => form.cover, () => form.categoryId, () => form.visibility, mdContent, htmlContent],
   autosave.notifyChanged
 )
 
@@ -291,6 +305,8 @@ async function onSave(status, publishTime) {
       cover: form.cover,
       categoryId: form.categoryId || null,
       tagIds: form.tagIds,
+      visibility: form.visibility,
+      ...(form.visibility === 'PASSWORD' && form.accessPassword ? { accessPassword: form.accessPassword } : {}),
       status
     }
     // 定时发布：仅在发布且选择了未来时间时携带（草稿忽略）
@@ -306,6 +322,8 @@ async function onSave(status, publishTime) {
       }
     }
     // 服务端会自删 autosave；本地清 localStorage 草稿与未保存标记
+    form.hasAccessPassword = form.visibility === 'PASSWORD'
+    form.accessPassword = ''
     autosave.clearDraft()
     publishDialogVisible.value = false
     ElMessage.success(
@@ -411,6 +429,9 @@ function fillArticle(a) {
   form.categoryId = s.categoryId
   form.tagIds = s.tagIds
   form.editorType = s.editorType
+  form.visibility = s.visibility
+  form.hasAccessPassword = s.hasAccessPassword
+  form.accessPassword = ''
   prevEditorType.value = form.editorType
   modeLocked.value = true
   // 正文槽位：articleToFormState 按原始 a.editorType 路由，未命中槽位为 null 不动
