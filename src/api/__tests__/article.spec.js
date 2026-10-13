@@ -10,7 +10,7 @@ const http = {
 
 vi.mock('../http', () => ({ default: http }))
 
-const { exportArticle, importArticle } = await import('../article')
+const { exportArticle, importArticle, getArticleBySlug } = await import('../article')
 
 describe('article 导入导出 api', () => {
   beforeEach(() => {
@@ -72,5 +72,13 @@ describe('article 导入导出 api', () => {
     expect(url).toBe('/articles/import')
     expect(body).toBeInstanceOf(FormData)
     expect(body.get('file')).toBe(file)
+  })
+
+  it('getArticleBySlug 请求 slug 固定链接详情（Zer0Drv/blog#14）', async () => {
+    http.get.mockResolvedValue({ id: 7, slug: 'my-post' })
+
+    await getArticleBySlug('my-post')
+
+    expect(http.get).toHaveBeenCalledWith('/articles/slug/my-post')
   })
 })

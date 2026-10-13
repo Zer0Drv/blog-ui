@@ -52,6 +52,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { pageMyFavorites } from '../api/interaction'
+import { articlePath } from '../utils/articleLink'
 import { resolveUploadUrl } from '../api/upload'
 
 const router = useRouter()
@@ -84,11 +85,11 @@ function onCardClick(a) {
     ElMessage.warning('文章已下架')
     return
   }
-  goDetail(a.id)
+  goDetail(a)
 }
 
-function goDetail(id) {
-  router.push(`/article/${id}`)
+function goDetail(article) {
+  router.push(articlePath(article))
 }
 
 function formatTime(t) {

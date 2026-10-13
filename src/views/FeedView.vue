@@ -9,7 +9,7 @@
         :key="a.id"
         class="article-card"
         shadow="hover"
-        @click="router.push(`/article/${a.id}`)"
+        @click="router.push(articlePath(a))"
       >
         <div class="card-body">
           <img v-if="a.cover" :src="resolveUploadUrl(a.cover)" class="cover" alt="cover" />
@@ -52,6 +52,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { pageFeed } from '../api/social'
+import { articlePath } from '../utils/articleLink'
 import { resolveUploadUrl } from '../api/upload'
 
 const router = useRouter()
