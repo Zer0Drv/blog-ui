@@ -77,15 +77,9 @@ function parseDispositionFilename(disposition) {
   return plain ? plain[1].trim() : ''
 }
 
-// 导出文章为 md/html 文件并触发浏览器下载；
-// 失败时 http 拦截器已把 blob 错误体转 JSON 并统一提示业务码
-export async function exportArticle(id, format = 'md') {
-  const resp = await http.get(`/articles/${id}/export`, {
-    params: { format },
-    responseType: 'blob'
-  })
-  const filename = parseDispositionFilename(resp.headers?.['content-disposition'])
-    || `article-${id}.${format === 'html' ? 'html' : 'md'}`
+// 触发浏览器下载 blob 响应；失败时 http 拦截器已把 blob 错误体转 JSON 并统一提示业务码
+function downloadBlob(resp, fallbackFilename) {
+  const filename = parseDispositionFilename(resp.headers?.['content-disposition']) || fallbackFilename
   const url = URL.createObjectURL(resp.data)
   const a = document.createElement('a')
   a.href = url
@@ -96,7 +90,27 @@ export async function exportArticle(id, format = 'md') {
   URL.revokeObjectURL(url)
 }
 
-// 导入 .md/.markdown/.txt（MARKDOWN 草稿）或 .html/.htm（RICHTEXT 草稿），≤2MB
+// 导出文章为 md/html 文件并触发浏览器下载
+export async function exportArticle(id, format = 'md') {
+  const resp = await http.get(`/articles/${id}/export`, {
+    params: { format },
+    responseType: 'blob'
+  })
+  downloadBlob(resp, `article-${id}.${format === 'html' ? 'html' : 'md'}`)
+}
+
+// 批量导出勾选文章打包 zip（ADMIN 全部 / AUTHOR 仅本人）；ids 逗号拼接由后端拆分
+export async function exportArticlesZip(ids) {
+  const resp = await http.get('/articles/export', {
+    params: { ids: ids.join(',') },
+    responseType: 'blob'
+  })
+  downloadBlob(resp, 'articles-export.zip')
+}
+
+// 导入 .md/.markdown/.txt/.html/.htm 单文件（≤2MB）或 .zip 批量（≤5MB）。
+// 响应统一为 { imported: [{id, title, warnings, externalImages}], failed: [{name, message}] }；
+// 单文件硬性失败（扩展名/大小/front matter 非法）仍走业务异常由拦截器提示
 export function importArticle(file) {
   const form = new FormData()
   form.append('file', file)
