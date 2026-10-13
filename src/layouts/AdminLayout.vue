@@ -38,6 +38,10 @@
           <el-icon><Setting /></el-icon>
           <span>站点设置</span>
         </el-menu-item>
+        <el-menu-item index="/admin/friend-links">
+          <el-icon><Link /></el-icon>
+          <span>友情链接</span>
+        </el-menu-item>
       </el-menu>
     </aside>
 
@@ -57,7 +61,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChatDotSquare, Collection, Document, Lock, Odometer, Setting, User } from '@element-plus/icons-vue'
+import { ChatDotSquare, Collection, Document, Link, Lock, Odometer, Setting, User } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -68,7 +72,8 @@ const titles = {
   '/admin/comments': '评论治理',
   '/admin/sensitive-words': '敏感词库',
   '/admin/users': '用户管理',
-  '/admin/site': '站点设置'
+  '/admin/site': '站点设置',
+  '/admin/friend-links': '友情链接'
 }
 
 const pageTitle = computed(() => titles[route.path] || '管理后台')

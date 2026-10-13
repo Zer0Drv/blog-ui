@@ -10,6 +10,8 @@ export const DEFAULT_SITE_NAME = 'Blog'
 const siteName = ref(DEFAULT_SITE_NAME)
 const siteDescription = ref('')
 const siteIcp = ref('')
+// P1 友链展示开关（site.friend_links_enabled，缺省视为开启，issue #17）
+const friendLinksEnabled = ref(true)
 
 let loadPromise = null
 
@@ -18,6 +20,9 @@ function applySiteConfig(config) {
   if (config['site.name']) siteName.value = config['site.name']
   siteDescription.value = config['site.description'] || ''
   siteIcp.value = config['site.icp'] || ''
+  if ('site.friend_links_enabled' in config) {
+    friendLinksEnabled.value = config['site.friend_links_enabled'] !== 'false'
+  }
 }
 
 function readCache() {
@@ -49,5 +54,5 @@ export function ensureSiteConfig() {
 }
 
 export function useSiteConfig() {
-  return { siteName, siteDescription, siteIcp }
+  return { siteName, siteDescription, siteIcp, friendLinksEnabled }
 }

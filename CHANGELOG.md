@@ -6,6 +6,7 @@
 
 ### Added
 
+- 友情链接：管理端友链管理页（分页/新增/编辑/启停/删除）、公众端 `/links` 友链页与页脚入口；站点设置新增友链展示开关（Zer0Drv/blog#17）
 - CD 版本归档与回滚：每次发布归档至 MinIO `blog-frontend-releases/sha-<8位>`，`workflow_dispatch` 填 `rollback_tag` 恢复历史版本（#36、#42）
 - 开发流程建设：CONTRIBUTING 规范、Issue/PR 模板、main 分支保护、Dependabot 周更 + 安全扫描、Projects 看板（#30、#31）
 
