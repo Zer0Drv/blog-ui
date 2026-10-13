@@ -70,6 +70,8 @@
         <span class="footer-links">
           <a href="/api/rss.xml" target="_blank" rel="noopener">RSS</a>
           <a href="/api/atom.xml" target="_blank" rel="noopener">Atom</a>
+          <!-- P1 友情链接入口（site.friend_links_enabled 开关联动，issue #17） -->
+          <router-link v-if="friendLinksEnabled" to="/links">友情链接</router-link>
         </span>
         <span v-if="siteIcp" class="footer-icp">{{ siteIcp }}</span>
       </div>
@@ -102,7 +104,7 @@ function onSearch() {
 }
 
 // P0 站点信息：品牌名/页脚；共享 useSiteConfig（sessionStorage 缓存，失败静默保留默认）
-const { siteName, siteDescription, siteIcp } = useSiteConfig()
+const { siteName, siteDescription, siteIcp, friendLinksEnabled } = useSiteConfig()
 
 onMounted(ensureSiteConfig)
 

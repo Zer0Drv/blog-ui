@@ -39,6 +39,10 @@
           <el-switch v-model="reviewRequired" />
           <span class="form-tip inline">开启后新评论需审核通过才公开展示</span>
         </el-form-item>
+        <el-form-item label="友情链接">
+          <el-switch v-model="friendLinksEnabled" />
+          <span class="form-tip inline">开启后公众端页脚与友链页展示已启用的友情链接</span>
+        </el-form-item>
       </el-form>
     </el-card>
   </div>
@@ -49,7 +53,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getAdminSiteConfig, saveAdminSiteConfig } from '../../api/admin'
 
-// P0 站点设置：七键表单，打开时 GET /admin/site/config 填表，保存 PUT 全量 map
+// P0 站点设置：八键表单，打开时 GET /admin/site/config 填表，保存 PUT 全量 map
 const KEYS = [
   'site.name',
   'site.description',
@@ -57,7 +61,8 @@ const KEYS = [
   'site.icp',
   'site.footer',
   'site.base_url',
-  'comment.review_required'
+  'comment.review_required',
+  'site.friend_links_enabled'
 ]
 
 const loading = ref(false)
@@ -68,6 +73,12 @@ const form = reactive(Object.fromEntries(KEYS.map(k => [k, ''])))
 const reviewRequired = computed({
   get: () => form['comment.review_required'] === 'true',
   set: v => { form['comment.review_required'] = v ? 'true' : 'false' }
+})
+
+// P1 友链展示开关（issue #17），同上布尔互转
+const friendLinksEnabled = computed({
+  get: () => form['site.friend_links_enabled'] === 'true',
+  set: v => { form['site.friend_links_enabled'] = v ? 'true' : 'false' }
 })
 
 async function load() {

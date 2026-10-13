@@ -99,7 +99,30 @@ export function getAdminSiteConfig() {
   return http.get('/admin/site/config')
 }
 
-// values 为 7 键 map：site.name/site.description/site.logo/site.icp/site.footer/site.base_url/comment.review_required
+// values 为 8 键 map：site.name/site.description/site.logo/site.icp/site.footer/site.base_url/comment.review_required/site.friend_links_enabled
 export function saveAdminSiteConfig(values) {
   return http.put('/admin/site/config', values)
+}
+
+// ---- 友情链接（P1 issue #17）----
+export function pageFriendLinks(params) {
+  return http.get('/admin/friend-links', { params })
+}
+
+// payload: { name, url, logo?, description?, sort? }
+export function createFriendLink(payload) {
+  return http.post('/admin/friend-links', payload)
+}
+
+export function updateFriendLink(id, payload) {
+  return http.put(`/admin/friend-links/${id}`, payload)
+}
+
+// status: 1 启用 / 0 停用
+export function setFriendLinkStatus(id, status) {
+  return http.put(`/admin/friend-links/${id}/status`, { status })
+}
+
+export function deleteFriendLink(id) {
+  return http.delete(`/admin/friend-links/${id}`)
 }
