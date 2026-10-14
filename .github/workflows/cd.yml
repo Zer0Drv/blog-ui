@@ -101,7 +101,7 @@ jobs:
     defaults:
       run:
         # 默认 shell 是 PowerShell：对中文/引号处理与 bash 不同，统一走 Git Bash
-        shell: 'D:\KimiData\daimon-bundle\runtime\git\bin\bash.exe --noprofile --norc -eo pipefail {0}'
+        shell: 'D:\Git\bin\bash.exe --noprofile --norc -eo pipefail {0}'
     steps:
       - name: 下载构建产物（回滚模式不需要）
         if: ${{ inputs.rollback_tag == '' }}
