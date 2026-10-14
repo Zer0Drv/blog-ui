@@ -71,6 +71,7 @@
         <span class="footer-links">
           <a href="/api/rss.xml" target="_blank" rel="noopener">RSS</a>
           <a href="/api/atom.xml" target="_blank" rel="noopener">Atom</a>
+          <router-link :to="auth.isLoggedIn ? '/settings' : '/login?redirect=/settings'">订阅新文章</router-link>
           <!-- P1 友情链接入口（site.friend_links_enabled 开关联动，issue #17） -->
           <router-link v-if="friendLinksEnabled" to="/links">友情链接</router-link>
         </span>

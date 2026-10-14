@@ -65,13 +65,14 @@
       </el-form>
     </el-card>
 
+    <SubscriptionSettings />
     <!-- 通知偏好卡片 -->
     <el-card class="settings-card">
       <template #header>
         <span class="card-title">通知偏好</span>
       </template>
       <el-form label-width="80px">
-        <el-form-item label="邮件通知">
+        <el-form-item label="评论邮件">
           <el-switch v-model="emailNotifyEnabled" :loading="prefLoading" @change="onToggleEmailNotify" />
           <span class="pref-tip">开启后，新的通知将同步发送到你的邮箱</span>
         </el-form-item>
@@ -88,6 +89,7 @@ import { useAuthStore } from '../stores/auth'
 import { updateMyProfile, changeMyPassword, getMyPreferences, updateMyPreferences } from '../api/user'
 import { uploadImage, resolveUploadUrl } from '../api/upload'
 import { notifyProfileUpdated } from '../utils/profileSync'
+import SubscriptionSettings from '../components/SubscriptionSettings.vue'
 
 const router = useRouter()
 const auth = useAuthStore()

@@ -1,0 +1,53 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
+import ElementPlus, { ElMessage } from 'element-plus'
+import SubscriptionSettings from '../SubscriptionSettings.vue'
+import { getSubscription, setSubscription, sendSubscriptionCode, confirmSubscriptionEmail, stopSubscriptionEmail } from '../../api/subscription'
+vi.mock('../../api/subscription', () => ({ getSubscription: vi.fn(), setSubscription: vi.fn(), sendSubscriptionCode: vi.fn(), confirmSubscriptionEmail: vi.fn(), stopSubscriptionEmail: vi.fn() }))
+const mountCard = () => mount(SubscriptionSettings, { global: { plugins: [ElementPlus] } })
+const button = (wrapper, text) => wrapper.findAll('button').find(button => button.text() === text)
+describe('新文章订阅', () => {
+  beforeEach(() => { vi.clearAllMocks(); vi.spyOn(ElMessage, 'success').mockImplementation(() => {}); vi.spyOn(ElMessage, 'warning').mockImplementation(() => {}) })
+  it('订阅成功后要求邮箱确认，未确认不自动开启邮件', async () => {
+    getSubscription.mockResolvedValue({ enabled: false, emailEnabled: false })
+    setSubscription.mockResolvedValue(undefined)
+    const wrapper = mountCard()
+    await flushPromises()
+    await wrapper.find('[role="switch"]').trigger('click')
+    await flushPromises()
+    expect(setSubscription).toHaveBeenCalledWith(true)
+    expect(wrapper.text()).toContain('已订阅站内通知')
+    expect(wrapper.text()).toContain('确认邮件订阅')
+    expect(confirmSubscriptionEmail).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+  it('订阅失败回滚开关', async () => {
+    getSubscription.mockResolvedValue({ enabled: false, emailEnabled: false })
+    setSubscription.mockRejectedValue(new Error('failed'))
+    const wrapper = mountCard()
+    await flushPromises()
+    await wrapper.find('[role="switch"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[role="switch"]').attributes('aria-checked')).toBe('false')
+    wrapper.unmount()
+  })
+  it('发码并校验邮箱，成功后可单独关闭邮件订阅', async () => {
+    getSubscription.mockResolvedValue({ enabled: true, emailEnabled: false })
+    confirmSubscriptionEmail.mockResolvedValue(undefined)
+    const wrapper = mountCard()
+    await flushPromises()
+    await button(wrapper, '发送确认码到账号邮箱').trigger('click')
+    await flushPromises()
+    expect(sendSubscriptionCode).toHaveBeenCalledOnce()
+    await wrapper.find('.confirm-row input').setValue('123456')
+    await button(wrapper, '确认邮件订阅').trigger('click')
+    await flushPromises()
+    expect(confirmSubscriptionEmail).toHaveBeenCalledWith('123456')
+    expect(wrapper.text()).toContain('已开启邮件订阅')
+    await button(wrapper, '关闭邮件订阅').trigger('click')
+    await flushPromises()
+    expect(stopSubscriptionEmail).toHaveBeenCalledOnce()
+    expect(wrapper.text()).toContain('确认邮件订阅')
+    wrapper.unmount()
+  })
+})

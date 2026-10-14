@@ -16,6 +16,7 @@ const routes = [
     children: [
       { path: '', name: 'home', component: () => import('../views/HomeView.vue'), meta: { public: true, title: '首页' } },
       { path: 'pages/:slug', name: 'page-detail', component: () => import('../views/PageDetailView.vue'), meta: { public: true, title: '页面' } },
+      { path: 'subscription/unsubscribe', name: 'subscription-unsubscribe', component: () => import('../views/UnsubscribeView.vue'), meta: { public: true, title: '退订' } },
       // 标题由详情加载后覆盖为文章标题（useDocumentTitle）
       // id 路由限定纯数字（旧链接不破坏），slug 固定链接走下方变体（Zer0Drv/blog#14）
       { path: 'article/:id(\\d+)', name: 'article-detail', component: () => import('../views/ArticleDetailView.vue'), meta: { public: true, title: '文章详情' } },
@@ -52,6 +53,7 @@ const routes = [
       { path: '', name: 'admin-dashboard', component: () => import('../views/admin/AdminDashboard.vue'), meta: { roles: [ROLES.ADMIN], title: '仪表盘 - 管理后台' } },
       { path: 'articles', name: 'admin-articles', component: () => import('../views/admin/AdminArticles.vue'), meta: { roles: [ROLES.ADMIN], title: '文章管理 - 管理后台' } },
       { path: 'pages', name: 'admin-pages', component: () => import('../views/admin/AdminPages.vue'), meta: { roles: [ROLES.ADMIN], title: '页面管理 - 管理后台' } },
+      { path: 'subscriptions', name: 'admin-subscriptions', component: () => import('../views/admin/AdminSubscriptions.vue'), meta: { roles: [ROLES.ADMIN], title: '订阅推送 - 管理后台' } },
       { path: 'pages/new', name: 'admin-page-new', component: () => import('../views/admin/AdminPageEdit.vue'), meta: { roles: [ROLES.ADMIN], title: '新建页面 - 管理后台' } },
       { path: 'pages/:id', name: 'admin-page-edit', component: () => import('../views/admin/AdminPageEdit.vue'), meta: { roles: [ROLES.ADMIN], title: '编辑页面 - 管理后台' } },
       { path: 'comments', name: 'admin-comments', component: () => import('../views/admin/AdminComments.vue'), meta: { roles: [ROLES.ADMIN], title: '评论治理 - 管理后台' } },

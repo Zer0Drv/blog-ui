@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import SettingsView from '../SettingsView.vue'
+vi.mock('../../components/SubscriptionSettings.vue', () => ({ default: { template: '<div />' } }))
 import { useAuthStore } from '../../stores/auth'
 import { updateMyProfile } from '../../api/user'
 import { notifyProfileUpdated } from '../../utils/profileSync'
