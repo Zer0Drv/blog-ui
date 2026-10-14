@@ -18,6 +18,9 @@
           <el-icon><Document /></el-icon>
           <span>文章管理</span>
         </el-menu-item>
+        <el-menu-item index="/admin/subscriptions">
+          <el-icon><Document /></el-icon><span>订阅推送</span>
+        </el-menu-item>
         <el-menu-item index="/admin/pages">
           <el-icon><Document /></el-icon>
           <span>页面管理</span>
@@ -74,6 +77,7 @@ const titles = {
   '/admin': '仪表盘',
   '/admin/articles': '文章管理',
   '/admin/pages': '页面管理',
+  '/admin/subscriptions': '订阅推送',
   '/admin/comments': '评论治理',
   '/admin/sensitive-words': '敏感词库',
   '/admin/users': '用户管理',

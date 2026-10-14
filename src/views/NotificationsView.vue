@@ -74,6 +74,7 @@ const typeTabs = [
   { label: '回复', value: 'COMMENT_REPLY' },
   { label: '@', value: 'MENTION' },
   { label: '点赞', value: 'ARTICLE_LIKE' },
+    { label: '订阅', value: 'ARTICLE_PUBLISHED' },
   { label: '关注', value: 'FOLLOW' },
   { label: '私信', value: 'PRIVATE_MESSAGE' }
 ]
@@ -91,6 +92,7 @@ function actionText(type) {
     COMMENT_REPLY: '回复了你的评论',
     MENTION: '在评论中提到了你',
     ARTICLE_LIKE: '点赞了你的文章',
+      ARTICLE_PUBLISHED: '发布了新文章',
     COMMENT_LIKE: '点赞了你的评论',
     FOLLOW: '关注了你',
     PRIVATE_MESSAGE: '给你发来私信',
