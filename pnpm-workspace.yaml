@@ -2,3 +2,6 @@ allowBuilds:
   es5-ext: false
   esbuild: true
   vue-demi: true
+# 本次安全修复采用新发布的 Mermaid，仅允许该具体版本提前安装。
+minimumReleaseAgeExclude:
+  - mermaid@12.2.0
