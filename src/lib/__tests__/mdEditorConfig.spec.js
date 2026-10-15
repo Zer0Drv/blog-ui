@@ -32,4 +32,31 @@ describe('mdEditorConfig', () => {
     expect(typeof mermaid.initialize).toBe('function')
     expect(typeof mermaid.render).toBe('function')
   })
+
+  it('Mermaid 使用间接 KaTeX 渲染流程图公式', async () => {
+    const mermaid = globalConfig.editorExtensions.mermaid.instance
+    const originalConfig = mermaid.mermaidAPI.getConfig()
+    // jsdom 不提供 SVG 布局；仅补齐尺寸接口，公式仍由 Mermaid/KaTeX 实际渲染。
+    const originalBBox = Object.getOwnPropertyDescriptor(SVGElement.prototype, 'getBBox')
+    Object.defineProperty(SVGElement.prototype, 'getBBox', {
+      configurable: true,
+      value: () => ({ x: 0, y: 0, width: 100, height: 20 })
+    })
+    try {
+      // jsdom 没有原生 MathML 布局，启用 Mermaid 的 KaTeX HTML 回退。
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', forceLegacyMathML: true })
+      const { svg } = await mermaid.render('mermaid-katex-regression',
+        'flowchart TD\n A["$$x^2 + y^2 = z^2$$"] --> B["完成"]')
+      expect(svg).toContain('katex-mathml')
+      expect(svg).toContain('katex-html')
+      expect(svg).toContain('完成')
+    } finally {
+      mermaid.initialize(originalConfig)
+      if (originalBBox) {
+        Object.defineProperty(SVGElement.prototype, 'getBBox', originalBBox)
+      } else {
+        delete SVGElement.prototype.getBBox
+      }
+    }
+  })
 })

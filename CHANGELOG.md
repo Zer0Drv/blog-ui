@@ -20,6 +20,7 @@
 
 ### Fixed
 
+- Mermaid 升至 12.2.0，移除间接引入的 KaTeX 0.16.x，修复安全告警及 Dependabot 无改动更新失败（#56）
 - 前端归档静默失效：mc mirror 对桶子前缀空传，归档/回滚改 cp -r + 存在性守卫（#42）
 - package.json 重复键（Dependabot 乱序合并）：md-editor-v3 定版 ^7.1.0、katex 去重（#43）
 - CI 工具链 Node 20（EOL）→ 24，actions 全部升级 Node 24 运行时（#35）
