@@ -48,6 +48,9 @@
         <el-menu-item index="/admin/sys/config">
           <el-icon><Setting /></el-icon><span>系统参数</span>
         </el-menu-item>
+        <el-menu-item index="/admin/attachments/cleanup">
+          <el-icon><Collection /></el-icon><span>附件清理</span>
+        </el-menu-item>
         <el-menu-item index="/admin/friend-links">
           <el-icon><Link /></el-icon>
           <span>友情链接</span>
@@ -86,6 +89,7 @@ const titles = {
   '/admin/users': '用户管理',
   '/admin/site': '站点设置',
   '/admin/sys/config': '系统参数',
+  '/admin/attachments/cleanup': '附件清理',
   '/admin/friend-links': '友情链接'
 }
 

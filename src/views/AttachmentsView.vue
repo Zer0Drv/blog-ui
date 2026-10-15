@@ -256,7 +256,7 @@ async function onCopy(item) {
 
 async function onDelete(item) {
   try {
-    await ElMessageBox.confirm('确认删除该附件？删除后不可恢复（不会删除已上传的文件）。', '警告', {
+    await ElMessageBox.confirm('确认移出附件库？文件先保留，未被引用的对象将在管理员扫描后进入 7 天观察期，再评估物理清理。观察期间管理员可恢复。', '警告', {
       type: 'error',
       confirmButtonText: '删除',
       cancelButtonText: '取消'
