@@ -51,6 +51,7 @@ const routes = [
     meta: { roles: [ROLES.ADMIN] },
     children: [
       { path: '', name: 'admin-dashboard', component: () => import('../views/admin/AdminDashboard.vue'), meta: { roles: [ROLES.ADMIN], title: '仪表盘 - 管理后台' } },
+      { path: 'attachments/cleanup', name: 'admin-attachment-cleanup', component: () => import('../views/admin/AdminAttachmentCleanup.vue'), meta: { roles: [ROLES.ADMIN], title: '附件清理 - 管理后台' } },
       { path: 'articles', name: 'admin-articles', component: () => import('../views/admin/AdminArticles.vue'), meta: { roles: [ROLES.ADMIN], title: '文章管理 - 管理后台' } },
       { path: 'pages', name: 'admin-pages', component: () => import('../views/admin/AdminPages.vue'), meta: { roles: [ROLES.ADMIN], title: '页面管理 - 管理后台' } },
       { path: 'subscriptions', name: 'admin-subscriptions', component: () => import('../views/admin/AdminSubscriptions.vue'), meta: { roles: [ROLES.ADMIN], title: '订阅推送 - 管理后台' } },
