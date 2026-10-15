@@ -61,6 +61,7 @@ const routes = [
       { path: 'taxonomy', name: 'admin-taxonomy', component: () => import('../views/admin/AdminTaxonomy.vue'), meta: { roles: [ROLES.ADMIN], title: '标签分类 - 管理后台' } },
       { path: 'users', name: 'admin-users', component: () => import('../views/admin/AdminUsers.vue'), meta: { roles: [ROLES.ADMIN], title: '用户管理 - 管理后台' } },
       { path: 'site', name: 'admin-site', component: () => import('../views/admin/AdminSite.vue'), meta: { roles: [ROLES.ADMIN], title: '站点设置 - 管理后台' } },
+      { path: 'sys/config', name: 'admin-sys-config', component: () => import('../views/admin/AdminSysConfig.vue'), meta: { roles: [ROLES.ADMIN], title: '系统参数 - 管理后台' } },
       // P1 友情链接管理（issue #17）
       { path: 'friend-links', name: 'admin-friend-links', component: () => import('../views/admin/AdminFriendLinks.vue'), meta: { roles: [ROLES.ADMIN], title: '友情链接 - 管理后台' } }
     ]
