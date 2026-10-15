@@ -77,4 +77,14 @@ describe('路由守卫分支（Cookie 会话，#22）', () => {
 
     expect(router.currentRoute.value.name).toBe('admin-dashboard')
   })
+
+  it('系统参数页仅允许 ADMIN', async () => {
+    http.get.mockResolvedValue({ id: 1, username: 'neo', role: 'AUTHOR' })
+    await router.push('/admin/sys/config')
+    expect(router.currentRoute.value.name).toBe('home')
+    setActivePinia(createPinia())
+    http.get.mockResolvedValue({ id: 1, username: 'neo', role: 'ADMIN' })
+    await router.push('/admin/sys/config')
+    expect(router.currentRoute.value.name).toBe('admin-sys-config')
+  })
 })
