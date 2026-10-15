@@ -124,11 +124,11 @@ pnpm preview    # 预览构建产物
 ### 编辑器页拆分
 - `src/utils/articleEdit.js`：编辑器页纯逻辑下沉（不依赖 Vue / Element Plus，全部可直测）——
   校验、草稿解析与恢复判定、自动保存请求体、定时发布校验、权限预检、表单状态映射等。
-- `src/composables/useArticleAutosave.js`：自动保存显式状态机
-  `clean →(notifyChanged)→ pending →(30s 到点)→ saving →(成功)→ clean`；
-  失败 / 正文为空驻留 `dirtyIdle` 不重试（等下次编辑）；`markInitialized()` 门挡初始填充；
-  `markClean()` 供版本恢复回填后复位；卸载前对未保存内容补存一次（有 id 走服务端轨，
-  新文章落 `localStorage` 草稿，与定时器轨道同 key 同结构）。
+- `src/composables/useArticleAutosave.js`：30s 防抖自动保存，单个在途请求，后续到点修改合并为最新快照串行发送；
+  快照按文章 ID / 清场代次 / 编辑版本归属，只有仍对应当前编辑版本的成功响应才能清脏。
+  失败 / 正文为空驻留 `dirtyIdle` 不重试（等下次编辑）；初始化与版本恢复回填不自动保存。
+  编辑路由按文章重建组件，固定本次表单 ID；切换前 `flush()` 等待原稿落轨，失败可继续编辑或明确放弃后离开；
+  正式保存先等待自动保存完成再清场。卸载兜底捕获原稿快照并排在旧请求之后补存（新文章落 `localStorage`）。
 - `src/components/RichEditor.vue`：wangeditor 生命周期的唯一主人（Editor/Toolbar 组件、官方 CSS、
   实例销毁全部收口），页面只通过 `v-model` 收发 HTML 字符串，拿不到编辑器实例。
 - `src/components/MdContentPreview.vue`：**sanitize 唯一挂载点**——任何 Markdown 正文渲染都必须
