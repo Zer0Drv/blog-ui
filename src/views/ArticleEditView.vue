@@ -1,7 +1,7 @@
 <template>
   <div class="editor-page">
     <el-card v-loading="pageLoading">
-      <el-form label-position="top">
+      <el-form label-position="top" :disabled="pageLoading || saving" :inert="pageLoading || saving">
         <el-form-item label="标题" required>
           <el-input v-model="form.title" maxlength="200" show-word-limit placeholder="请输入文章标题" />
         </el-form-item>
@@ -149,8 +149,8 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
@@ -189,9 +189,12 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
-const articleId = computed(() => route.params.id || null)
+// MainLayout 按编辑路径重建组件；ID 固定属于本次表单，卸载时不能读取目标路由的 ID。
+const articleId = ref(route.params.id || null)
+let active = true
+onBeforeUnmount(() => { active = false })
 const modeLocked = ref(false)
-const pageLoading = ref(false)
+const pageLoading = ref(true)
 const saving = ref(false)
 const coverUploading = ref(false)
 
@@ -265,6 +268,20 @@ const autosave = useArticleAutosave({
 })
 const autosaveTip = autosave.tip
 
+async function protectDraft() {
+  if (saving.value) return false
+  if (await autosave.flush()) return true
+  try {
+    await ElMessageBox.confirm('草稿未能保存，离开将丢失未保存的修改，仍要离开？', '未保存的修改', {
+      type: 'warning', confirmButtonText: '仍然离开', cancelButtonText: '继续编辑'
+    })
+    autosave.markClean()
+    return true
+  } catch { return false }
+}
+onBeforeRouteUpdate(protectDraft)
+onBeforeRouteLeave(protectDraft)
+
 // 初始填充（onMounted）不触发计时；版本恢复 reloadArticle→fillArticle 的回填会触发，
 // 由 reloadArticle 在回填后调 autosave.markClean() 复位（useArticleAutosave.spec 行为锁锁定）
 watch(
@@ -287,6 +304,7 @@ function currentContent() {
 }
 
 async function onSave(status, publishTime) {
+  if (!active || pageLoading.value || saving.value) return
   const content = currentContent()
   const v = validateArticle(form, content)
   if (!v.ok) {
@@ -295,6 +313,9 @@ async function onSave(status, publishTime) {
   }
   saving.value = true
   try {
+    // 正式保存必须排在自动保存之后，防止旧草稿在服务端清场后才写入。
+    await autosave.flush()
+    if (!active) return
     const body = {
       title: form.title.trim(),
       content,
@@ -311,15 +332,12 @@ async function onSave(status, publishTime) {
     }
     // 定时发布：仅在发布且选择了未来时间时携带（草稿忽略）
     if (status === 'PUBLISHED' && publishTime) body.publishTime = publishTime
+    let newId = null
     if (articleId.value) {
       await updateArticle(articleId.value, body)
     } else {
       // 后端 POST /articles 的 data 直接是新建文章 id（Long），不是对象
-      const newId = await createArticle(body)
-      if (newId) {
-        modeLocked.value = true
-        router.replace(`/editor/${newId}`)
-      }
+      newId = await createArticle(body)
     }
     // 服务端会自删 autosave；本地清 localStorage 草稿与未保存标记
     form.hasAccessPassword = form.visibility === 'PASSWORD'
@@ -331,6 +349,11 @@ async function onSave(status, publishTime) {
         ? (publishTime ? '已设置定时发布' : '发布成功')
         : '草稿已保存'
     )
+    if (newId) {
+      // 先清场、退出 saving，再导航；路由守卫不会重复保存本地草稿。
+      saving.value = false
+      await router.replace(`/editor/${newId}`)
+    }
   } catch { /* 拦截器已提示 */ } finally {
     saving.value = false
   }
@@ -379,8 +402,8 @@ function onPickCover(url) {
 // 批量导入结果无单篇可跳，回我的文章列表看草稿清单
 const importInput = ref(null)
 const { importing, handleFile: handleImportFile } = useArticleImport({
-  onImported: item => router.push(`/editor/${item.id}`),
-  onBatchDone: () => router.push({ name: 'my-articles' })
+  onImported: item => active && router.push(`/editor/${item.id}`),
+  onBatchDone: () => active && router.push({ name: 'my-articles' })
 })
 
 function triggerImport() {
@@ -412,6 +435,7 @@ async function reloadArticle() {
   // 恢复版本成功后重新拉取文章填表单（服务端恢复前已对当前行留快照）
   try {
     const a = await getArticle(articleId.value)
+    if (!active) return
     fillArticle(a)
     // 回填触发的 watch → notifyChanged 在下一 tick 才执行；等它跑完再复位状态机：
     // 恢复版本不是"未保存的修改"，不应重新计时自动保存（之后的真实编辑仍正常计时）
@@ -434,9 +458,9 @@ function fillArticle(a) {
   form.accessPassword = ''
   prevEditorType.value = form.editorType
   modeLocked.value = true
-  // 正文槽位：articleToFormState 按原始 a.editorType 路由，未命中槽位为 null 不动
-  if (s.mdContent != null) mdContent.value = s.mdContent
-  else htmlContent.value = s.htmlContent
+  // 同时清空未使用的正文槽位，避免保留其他编辑模式的旧内容。
+  mdContent.value = s.mdContent || ''
+  htmlContent.value = s.htmlContent || ''
 }
 
 /* ---------- 初始化 ---------- */
@@ -452,16 +476,20 @@ onMounted(async () => {
         `检测到本地草稿（${draft.savedAt ? formatClock(draft.savedAt) : '未知时间'}），恢复？`,
         '恢复草稿',
         { type: 'info', confirmButtonText: '恢复', cancelButtonText: '不恢复' }
-      ).then(() => fillDraft(draft)).catch(() => {
-        localStorage.removeItem(DRAFT_NEW_KEY)
+      ).then(() => { if (active) fillDraft(draft) }).catch(() => {
+        if (active) localStorage.removeItem(DRAFT_NEW_KEY)
       })
     }
+    await nextTick()
+    if (!active) return
+    pageLoading.value = false
     autosave.markInitialized()
     return
   }
   pageLoading.value = true
   try {
     const a = await getArticle(articleId.value)
+    if (!active) return
     // 编辑他人文章提前拦截（后端保存时也会拒绝，这里避免加载出完整内容）
     if (!auth.isAdmin && String(a.author?.id) !== String(auth.user?.id)) {
       ElMessage.warning('只能编辑自己的文章')
@@ -472,17 +500,21 @@ onMounted(async () => {
     // 服务端自动保存草稿：savedAt 晚于文章 updateTime 时提示恢复
     try {
       const draft = await getAutosave(articleId.value)
+      if (!active) return
       if (shouldOfferServerDraft(draft, a.updateTime)) {
         await ElMessageBox.confirm(
           `检测到自动保存草稿（${formatClock(draft.savedAt)}），恢复？`,
           '恢复草稿',
           { type: 'info', confirmButtonText: '恢复', cancelButtonText: '不恢复' }
-        ).then(() => fillDraft(draft)).catch(() => {})
+        ).then(() => { if (active) fillDraft(draft) }).catch(() => {})
       }
     } catch { /* 拦截器已提示 */ }
   } catch { /* 拦截器已提示 */ } finally {
-    pageLoading.value = false
-    autosave.markInitialized()
+    await nextTick()
+    if (active) {
+      pageLoading.value = false
+      autosave.markInitialized()
+    }
   }
 })
 </script>

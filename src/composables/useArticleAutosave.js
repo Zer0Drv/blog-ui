@@ -1,38 +1,15 @@
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { autosaveArticle } from '../api/article'
 import { AUTOSAVE_DELAY, DRAFT_NEW_KEY, formatClock } from '../utils/articleEdit'
 
-// 默认本地轨：新文章（无 id）自动保存落 localStorage。
-// 定时器到点与卸载补存（内容非空时）都走本地轨，key/结构完全一致（含 savedAt），
-// 再次进入编辑器由恢复弹窗逻辑原样捡起。
 function defaultSaveLocal(body) {
   localStorage.setItem(DRAFT_NEW_KEY, JSON.stringify({ ...body, savedAt: Date.now() }))
 }
 
 /**
- * 自动保存显式状态机（原 ArticleEditView 内联 dirty/定时器/双轨逻辑下沉）。
- *
- * 状态迁移：clean →(notifyChanged)→ pending →(delay 到点)→ saving →(成功)→ clean
- *                  ↑_______________(失败 / 正文为空)→ dirtyIdle（驻留不重试，等下次编辑）
- *
- * 内部以 dirty / saving / timerArmed 三个原语精确复刻旧隐式状态机的所有交错行为，
- * status 为派生只读视图。注入式端口：测试传替身，零 mock 框架。
- *
- * @param {{
- *   articleId: import('vue').Ref<string|null>,
- *   buildBody: () => object|null,
- *   saveRemote?: (id: string, body: object) => Promise<any>,
- *   saveLocal?: (body: object) => void,
- *   delay?: number
- * }} options
- * @returns {{
- *   status: import('vue').ComputedRef<'clean'|'pending'|'saving'|'dirtyIdle'>,
- *   tip: import('vue').ComputedRef<string>,
- *   notifyChanged(): void,
- *   markInitialized(): void,
- *   markClean(): void,
- *   clearDraft(): void
- * }}
+ * 30s 防抖，单个在途请求；到点时仍在保存则合并为下一次最新快照。
+ * 快照归属文章 ID、清场代次与编辑 revision，旧响应只能完成自己的版本。
+ * flush() 供路由离开/正式保存等待草稿落轨，失败返回 false 并保留脏状态。
  */
 export function useArticleAutosave({
   articleId,
@@ -45,98 +22,129 @@ export function useArticleAutosave({
   const saving = ref(false)
   const timerArmed = ref(false)
   const lastSavedAt = ref('')
-  const initialized = ref(false)
+  let initialized = false
+  let disposed = false
+  let revision = 0
+  let generation = 0
   let timer = null
+  let inFlight = null
+  let due = false
 
   const status = computed(() => {
     if (saving.value) return 'saving'
     if (!dirty.value) return 'clean'
     return timerArmed.value ? 'pending' : 'dirtyIdle'
   })
-
-  const tip = computed(() => {
-    if (dirty.value) return '有未保存的修改'
-    return lastSavedAt.value ? `已自动保存 ${lastSavedAt.value}` : ''
-  })
+  const tip = computed(() => dirty.value
+    ? '有未保存的修改'
+    : lastSavedAt.value ? `已自动保存 ${lastSavedAt.value}` : '')
 
   function clearTimer() {
-    if (timer) {
-      clearTimeout(timer)
-      timer = null
-    }
+    if (timer !== null) clearTimeout(timer)
+    timer = null
     timerArmed.value = false
   }
 
-  function armTimer() {
+  function notifyChanged() {
+    if (!initialized || disposed) return
+    revision++
+    dirty.value = true
+    due = false
     clearTimer()
     timerArmed.value = true
     timer = setTimeout(run, delay)
   }
 
-  // 编辑变更入口。initialized 门：初始填充不触发计时；
-  // 版本恢复的回填会触发一次 notifyChanged，由视图在回填后调 markClean() 复位
-  function notifyChanged() {
-    if (!initialized.value) return
-    dirty.value = true
-    armTimer()
-  }
-
   function markInitialized() {
-    initialized.value = true
+    if (!disposed) initialized = true
   }
 
-  // 版本恢复等外部回填后复位：清脏 + 停表，保持 initialized 与 lastSavedAt——
-  // 恢复本身不是"未保存的修改"，30s 到点不应再自动保存；之后的真实编辑仍正常计时
   function markClean() {
+    generation++
     dirty.value = false
+    lastSavedAt.value = ''
+    due = false
     clearTimer()
   }
 
-  async function run() {
-    timer = null
-    timerArmed.value = false
-    if (!dirty.value) return
-    const body = buildBody()
-    // 正文为空不落轨，dirty 驻留 → dirtyIdle
-    if (!body) return
-    if (articleId.value) {
-      saving.value = true
-      try {
-        const data = await saveRemote(articleId.value, body)
-        lastSavedAt.value = formatClock(data?.savedAt || Date.now())
+  watch(articleId, () => {
+    markClean()
+    initialized = false
+  }, { flush: 'sync' })
+
+  function isCurrent(snapshot) {
+    return !disposed && snapshot.id === articleId.value && snapshot.generation === generation
+  }
+
+  async function persist(snapshot) {
+    try {
+      const data = snapshot.id
+        ? await saveRemote(snapshot.id, snapshot.body)
+        : saveLocal(snapshot.body)
+      if (isCurrent(snapshot) && snapshot.revision === revision) {
         dirty.value = false
-      } catch { /* 拦截器已提示；驻留 dirtyIdle 不重试 */ } finally {
-        saving.value = false
+        lastSavedAt.value = formatClock(data?.savedAt || Date.now())
       }
-    } else {
-      // 新文章无服务端 autosave，落 localStorage
-      saveLocal(body)
-      lastSavedAt.value = formatClock(Date.now())
-      dirty.value = false
+      return true
+    } catch {
+      // 无新编辑时驻留 dirtyIdle；不自动重试失败的同一版本。
+      return false
     }
   }
 
-  // 正式保存成功后清场（服务端会自删 autosave；本地清 localStorage 草稿与未保存标记）
-  function clearDraft() {
-    dirty.value = false
+  function run() {
     clearTimer()
+    if (disposed || !dirty.value) return Promise.resolve(true)
+    if (inFlight) {
+      due = true
+      return inFlight.promise
+    }
+    const body = buildBody()
+    if (!body) return Promise.resolve(false)
+    const snapshot = { id: articleId.value, body, revision, generation }
+    saving.value = true
+    const request = { snapshot, promise: null }
+    inFlight = request
+    request.promise = persist(snapshot).finally(() => {
+      inFlight = null
+      saving.value = false
+      if (!disposed && due && dirty.value && !timerArmed.value) {
+        due = false
+        run()
+      }
+    })
+    return request.promise
+  }
+
+  async function flush() {
+    clearTimer()
+    while (!disposed && (dirty.value || inFlight)) {
+      const snapshot = inFlight?.snapshot || { generation, revision }
+      const ok = await (inFlight ? inFlight.promise : run())
+      // 较旧版本失败时仍尝试最新修改；只有当前版本失败才报告未能保存。
+      if (!ok && snapshot.generation === generation && snapshot.revision === revision) return false
+      clearTimer()
+    }
+    return true
+  }
+
+  function clearDraft() {
+    markClean()
     localStorage.removeItem(DRAFT_NEW_KEY)
   }
 
   onBeforeUnmount(() => {
-    // 卸载前对未保存内容补存一次：有 id 走服务端轨；无 id（新文章）内容非空
-    // 也补写 localStorage 草稿，与定时器轨道同 key 同结构（含 savedAt）。
-    // 与编辑器 destroy 分钩：编辑器生命周期归页面/组件，这里只管自动保存。
     clearTimer()
-    if (!dirty.value) return
-    const body = buildBody()
+    // 必须在卸载时捕获 ID/正文。若已有旧请求，补存排在它之后，避免回退。
+    const body = dirty.value ? buildBody() : null
+    const snapshot = { id: articleId.value, body, revision, generation }
+    const pending = inFlight
+    disposed = true
     if (!body) return
-    if (articleId.value) {
-      saveRemote(articleId.value, body).catch(() => {})
-    } else {
-      saveLocal(body)
-    }
+    if (pending && pending.snapshot.generation === generation && pending.snapshot.revision === revision) return
+    if (pending) pending.promise.then(() => persist(snapshot))
+    else persist(snapshot)
   })
 
-  return { status, tip, notifyChanged, markInitialized, markClean, clearDraft }
+  return { status, tip, notifyChanged, markInitialized, markClean, clearDraft, flush }
 }

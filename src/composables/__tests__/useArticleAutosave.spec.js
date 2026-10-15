@@ -19,6 +19,12 @@ function mountAutosave(options) {
 
 const BODY = { title: '标题', content: '正文', summary: '', cover: '', categoryId: null }
 
+function deferred() {
+  let resolve, reject
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no })
+  return { promise, resolve, reject }
+}
+
 function setup(overrides = {}) {
   const saveRemote = vi.fn().mockResolvedValue({ savedAt: 1720000000000 })
   const saveLocal = vi.fn()
@@ -127,8 +133,182 @@ describe('useArticleAutosave 状态机', () => {
     expect(api.status.value).toBe('saving')
 
     resolveSave({ savedAt: 1720000000000 })
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
     expect(api.status.value).toBe('clean')
+  })
+
+  it('旧请求完成不能清除新编辑；新编辑在自己的防抖窗口到点后保存', async () => {
+    const first = deferred()
+    const saveRemote = vi.fn().mockReturnValueOnce(first.promise).mockResolvedValue({})
+    let content = 'A'
+    const { api, wrapper } = setup({ saveRemote, buildBody: () => ({ ...BODY, content }) })
+    api.markInitialized()
+    api.notifyChanged()
+    await vi.advanceTimersByTimeAsync(30000)
+    content = 'B'
+    api.notifyChanged()
+    first.resolve({})
+    await vi.advanceTimersByTimeAsync(0)
+    expect(api.status.value).toBe('pending')
+    expect(api.tip.value).toBe('有未保存的修改')
+    await vi.advanceTimersByTimeAsync(30000)
+    expect(saveRemote.mock.calls.map(([id, body]) => [id, body.content])).toEqual([['42', 'A'], ['42', 'B']])
+    expect(api.status.value).toBe('clean')
+    wrapper.unmount()
+  })
+
+  it('慢请求期间合并后续修改并串行发送，避免响应乱序回退草稿', async () => {
+    const first = deferred()
+    const second = deferred()
+    const saveRemote = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+    let content = 'A'
+    const { api, wrapper } = setup({ saveRemote, buildBody: () => ({ ...BODY, content }) })
+    api.markInitialized()
+    api.notifyChanged()
+    await vi.advanceTimersByTimeAsync(30000)
+    content = 'B'
+    api.notifyChanged()
+    await vi.advanceTimersByTimeAsync(30000)
+    expect(saveRemote).toHaveBeenCalledTimes(1)
+    content = 'C'
+    api.notifyChanged()
+    await vi.advanceTimersByTimeAsync(30000)
+    expect(saveRemote).toHaveBeenCalledTimes(1)
+    first.resolve({})
+    await vi.advanceTimersByTimeAsync(0)
+    expect(saveRemote.mock.calls.map(([, body]) => body.content)).toEqual(['A', 'C'])
+    expect(api.tip.value).toBe('有未保存的修改')
+    second.resolve({})
+    await vi.advanceTimersByTimeAsync(0)
+    expect(api.status.value).toBe('clean')
+    wrapper.unmount()
+  })
+
+  it('旧请求失败也不丢弃期间的新修改，新版本按时串行保存', async () => {
+    const first = deferred()
+    const saveRemote = vi.fn().mockReturnValueOnce(first.promise).mockResolvedValue({})
+    let content = 'A'
+    const { api, wrapper } = setup({ saveRemote, buildBody: () => ({ ...BODY, content }) })
+    api.markInitialized()
+    api.notifyChanged()
+    await vi.advanceTimersByTimeAsync(30000)
+    content = 'B'
+    api.notifyChanged()
+    await vi.advanceTimersByTimeAsync(30000)
+    first.reject(new Error('断网'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(saveRemote.mock.calls.map(([, body]) => body.content)).toEqual(['A', 'B'])
+    expect(api.status.value).toBe('clean')
+    wrapper.unmount()
+  })
+
+  it('保存中卸载：捕获最新快照并在旧请求后补存，卸载后不再读表单', async () => {
+    const first = deferred()
+    const saveRemote = vi.fn().mockReturnValueOnce(first.promise).mockResolvedValue({})
+    let content = 'A'
+    const { api, wrapper } = setup({ saveRemote, buildBody: () => ({ ...BODY, content }) })
+    api.markInitialized()
+    api.notifyChanged()
+    await vi.advanceTimersByTimeAsync(30000)
+    content = 'B'
+    api.notifyChanged()
+    wrapper.unmount()
+    expect(saveRemote).toHaveBeenCalledTimes(1)
+    content = '别的文章'
+    first.resolve({})
+    await vi.advanceTimersByTimeAsync(0)
+    expect(saveRemote.mock.calls.map(([id, body]) => [id, body.content])).toEqual([['42', 'A'], ['42', 'B']])
+    expect(api.tip.value).toBe('有未保存的修改')
+  })
+
+  it('保存中卸载但没有新修改：不重复发送同一个快照', async () => {
+    const first = deferred()
+    const saveRemote = vi.fn().mockReturnValue(first.promise)
+    const { api, wrapper } = setup({ saveRemote })
+    api.markInitialized()
+    api.notifyChanged()
+    await vi.advanceTimersByTimeAsync(30000)
+    wrapper.unmount()
+    first.resolve({})
+    await vi.advanceTimersByTimeAsync(60000)
+    expect(saveRemote).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['markClean', 'clearDraft'])('%s 后旧请求完成不能更新新一轮保存状态', async method => {
+    const first = deferred()
+    const saveRemote = vi.fn().mockReturnValueOnce(first.promise).mockResolvedValue({})
+    const { api, wrapper } = setup({ saveRemote })
+    api.markInitialized()
+    api.notifyChanged()
+    await vi.advanceTimersByTimeAsync(30000)
+    api[method]()
+    api.notifyChanged()
+    first.resolve({})
+    await vi.advanceTimersByTimeAsync(0)
+    expect(api.status.value).toBe('pending')
+    expect(api.tip.value).toBe('有未保存的修改')
+    await vi.advanceTimersByTimeAsync(30000)
+    expect(saveRemote).toHaveBeenCalledTimes(2)
+    expect(api.status.value).toBe('clean')
+    wrapper.unmount()
+  })
+
+  it('文章 ID 切换后旧响应不能清除新文章修改或复用旧计时器', async () => {
+    const first = deferred()
+    const articleId = ref('42')
+    const saveRemote = vi.fn().mockReturnValueOnce(first.promise).mockResolvedValue({})
+    const { api, wrapper } = setup({ articleId, saveRemote })
+    api.markInitialized()
+    api.notifyChanged()
+    await vi.advanceTimersByTimeAsync(30000)
+    articleId.value = '99'
+    api.notifyChanged() // 初始化完成之前不产生草稿
+    api.markInitialized()
+    api.notifyChanged()
+    first.resolve({})
+    await vi.advanceTimersByTimeAsync(0)
+    expect(api.status.value).toBe('pending')
+    await vi.advanceTimersByTimeAsync(30000)
+    expect(saveRemote.mock.calls.map(([id]) => id)).toEqual(['42', '99'])
+    wrapper.unmount()
+  })
+
+  it('flush 等待在途请求并保存期间的新修改；失败时返回 false 保持脏状态', async () => {
+    const first = deferred()
+    const second = deferred()
+    const saveRemote = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+    let content = 'A'
+    const { api, wrapper } = setup({ saveRemote, buildBody: () => ({ ...BODY, content }) })
+    api.markInitialized()
+    api.notifyChanged()
+    const result = api.flush()
+    content = 'B'
+    api.notifyChanged()
+    first.resolve({})
+    await vi.advanceTimersByTimeAsync(0)
+    expect(saveRemote.mock.calls.map(([, body]) => body.content)).toEqual(['A', 'B'])
+    second.reject(new Error('断网'))
+    expect(await result).toBe(false)
+    expect(api.status.value).toBe('dirtyIdle')
+    wrapper.unmount()
+  })
+
+  it('flush 遇到旧版本失败仍保存最新版本，不提前报告新版本保存失败', async () => {
+    const first = deferred()
+    const saveRemote = vi.fn().mockReturnValueOnce(first.promise).mockResolvedValue({})
+    let content = 'A'
+    const { api, wrapper } = setup({ saveRemote, buildBody: () => ({ ...BODY, content }) })
+    api.markInitialized()
+    api.notifyChanged()
+    await vi.advanceTimersByTimeAsync(30000)
+    content = 'B'
+    api.notifyChanged()
+    const result = api.flush()
+    first.reject(new Error('旧版本失败'))
+    expect(await result).toBe(true)
+    expect(saveRemote.mock.calls.map(([, body]) => body.content)).toEqual(['A', 'B'])
+    expect(api.status.value).toBe('clean')
+    wrapper.unmount()
   })
 
   it('saveRemote 失败：驻留 dirtyIdle 不重试，下次编辑才重新计时', async () => {

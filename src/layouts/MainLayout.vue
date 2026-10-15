@@ -62,7 +62,7 @@
       </div>
     </header>
     <main class="content">
-      <router-view />
+      <router-view :key="route.name === 'editor-edit' || route.name === 'editor-new' ? route.path : undefined" />
     </main>
     <!-- P0 页脚：站点描述 / ICP / RSS / Atom -->
     <footer class="footer">

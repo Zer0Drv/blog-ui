@@ -11,6 +11,8 @@ const routerReplace = vi.hoisted(() => vi.fn())
 const routeParams = vi.hoisted(() => ({ id: undefined }))
 
 vi.mock('vue-router', () => ({
+  onBeforeRouteLeave: vi.fn(),
+  onBeforeRouteUpdate: vi.fn(),
   useRoute: () => ({ params: routeParams }),
   useRouter: () => ({ push: routerPush, replace: routerReplace })
 }))
