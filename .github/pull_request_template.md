@@ -17,6 +17,7 @@
 ## 质量门禁自查
 
 - [ ] 已关联经审核的 Issue
+- [ ] 关联 Issue 已有当前阶段结果说明；待合并/验收项已明确后续回填责任与时机
 - [ ] `vitest run` 全量通过 + `vite build` 通过
 - [ ] 未引入未经 Issue 讨论的新依赖
 - [ ] 一个 commit 只做一件事，message 中文并 refs Issue
