@@ -193,7 +193,7 @@ src/
 
 ## 测试与 CI/CD
 
-- `pnpm test` 跑 Vitest（jsdom 环境），共 **34 个 spec 文件 / 236 个用例**，覆盖 api 层
+- `pnpm test` 跑 Vitest（页面测试使用 jsdom，发布门禁使用 Node 环境），数量与结果见对应提交的 [CI 报告](https://github.com/Zer0Drv/blog-ui/actions/workflows/ci.yml)，覆盖 api 层
   （http 拆包/验证码/上传/附件/导入导出等）、utils 纯函数集（articleEdit/sanitize/同步事件）、
   composables（useArticleAutosave / useRealtimeTopic / useCurrentUser）、stores（auth/realtime）、
   router 守卫与页签标题、布局及关键组件/页面（CaptchaInput、CommentSection、LoginView 等）。
@@ -201,11 +201,12 @@ src/
   Node 20 已 EOL），`pnpm install --frozen-lockfile` 严格模式（lockfile 未同步直接失败），
   随后依次 `pnpm test`、`pnpm build`。
 - CD（`.github/workflows/cd.yml`）：push main 触发（按 `src/`、`package.json` 等路径过滤，
-  提交信息带 `[skip cd]` 可跳过）：GitHub 托管 runner 构建 dist → 自托管 runner 同步到部署机
+  提交信息带 `[skip cd]` 可跳过）：复用同一 SHA 的完整 CI/test/build → production 审批 → 自托管 runner 校验产物提交及文件校验和后同步到部署机
   MinIO `blog-frontend` 桶（Nginx 网关边缘缓存直出，`index.html` no-cache 即时生效）。
   **版本归档**：每次发布把 dist 快照到 `blog-frontend-releases/sha-<8位>/`（独立桶，不回删）。
   **回滚**：Actions → CD → Run workflow 填 `rollback_tag` —— 跳过构建，校验归档存在后
   清线上桶并从归档恢复。
+  发布完整性、历史归档兼容与验证边界见 [发布门禁](docs/release-gate.md)；当前尚未覆盖真实浏览器与发布后网关业务冒烟。
 - 协作流程：一切变更走 Issue → 分支 → PR → 所有者审批合并，**禁止直推 main**（详见
   [CONTRIBUTING.md](CONTRIBUTING.md)；含 Conventional Commits 中文摘要、P0/P1/P2 优先级 label、
   hotfix 通道、semver tag 发布约定）。Dependabot 每周一跟踪 npm 与 GitHub Actions 更新
@@ -235,5 +236,6 @@ src/
 当前已完成：v1（M1–M5）+ M6 + P0 全量功能，含验证码、实时推送与站点设置；
 架构深化（会话收口 / 编辑器拆分 / 实时订阅惯用法）与 CI/CD 链路（测试门禁、MinIO 归档与回滚）。
 
-后续候选：slug 固定链接、文章密码保护、友情链接、自定义页面、
-TOTP 两步验证、AI 摘要/评论审核增强。
+已交付的后续功能：slug 固定链接、文章密码保护、友情链接、自定义页面、订阅推送、系统参数和附件观察期清理；对应记录见 [CHANGELOG](CHANGELOG.md)。
+
+后续候选：TOTP 两步验证、AI 摘要/评论审核增强；质量与运维增量继续由 [blog#58](https://github.com/Zer0Drv/blog/issues/58) 跟踪。
