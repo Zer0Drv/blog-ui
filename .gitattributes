@@ -1,0 +1,2 @@
+# Git Bash on the Windows deployment runner requires LF shell scripts.
+*.sh text eol=lf

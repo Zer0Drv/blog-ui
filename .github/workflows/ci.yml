@@ -1,16 +1,33 @@
 name: CI
 
 on:
+  workflow_call:
+    outputs:
+      sha:
+        value: ${{ jobs.build.outputs.sha }}
+      tag:
+        value: ${{ jobs.build.outputs.tag }}
+      artifact:
+        value: ${{ jobs.build.outputs.artifact }}
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.release.outputs.sha }}
+      tag: ${{ steps.release.outputs.tag }}
+      artifact: ${{ steps.release.outputs.artifact }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
 
       # pnpm v12（与 pnpm-workspace.yaml 的 allowBuilds 字段配套）
       - name: Set up pnpm
@@ -35,3 +52,24 @@ jobs:
 
       - name: Build
         run: pnpm run build
+
+      - name: 生成发布清单
+        id: release
+        env:
+          RELEASE_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          node .github/scripts/release-manifest.mjs create dist "$RELEASE_SHA" "$RUN_URL"
+          echo "sha=$RELEASE_SHA" >> "$GITHUB_OUTPUT"
+          echo "tag=sha-${RELEASE_SHA:0:8}" >> "$GITHUB_OUTPUT"
+          echo "artifact=frontend-dist-$RELEASE_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: 上传已验证产物
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-dist-${{ github.sha }}
+          path: dist/
+          include-hidden-files: true
+          retention-days: 90
+          if-no-files-found: error
