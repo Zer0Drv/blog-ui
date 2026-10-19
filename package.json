@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "smoke:gateway": "node .github/scripts/gateway-smoke.mjs"
+    "smoke:gateway": "node .github/scripts/gateway-smoke.mjs",
+    "verify:deployment": "node .github/scripts/deployment-evidence.mjs"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-10-19T03:33:39.758Z",
+  "gateway": "http://localhost",
+  "frontendSha": "6b9b4dd19d011cb8b100733537f46df858219153",
+  "articleId": "1",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200
+    },
+    {
+      "path": "/assets/index-EnxGS9cT.js",
+      "status": 200
+    },
+    {
+      "path": "/assets/index-DfrAStMM.css",
+      "status": 200
+    },
+    {
+      "path": "/release.json",
+      "status": 200
+    },
+    {
+      "path": "/api/site/config",
+      "status": 200
+    },
+    {
+      "path": "/api/articles",
+      "status": 200
+    },
+    {
+      "path": "/api/articles/slug/post-1",
+      "status": 200
+    },
+    {
+      "path": "/article/post-1",
+      "status": 200
+    }
+  ],
+  "backend": {
+    "image": "ghcr.io/zer0drv/blog-backend:sha-b99011ea",
+    "imageId": "sha256:71599c05734bdc8d1975e4dff7bfefeacf748378745cd1863c86f04fa50d3835",
+    "revision": "b99011eac43ed326c534eb2b9627b8e8e3d5bc5a",
+    "running": true
+  },
+  "database": {
+    "schema": "blog_dev",
+    "success": 1,
+    "version": "16",
+    "checksum": 1244917824,
+    "description": "attachment cleanup",
+    "failedCount": 0
+  },
+  "scope": "Observed frontend/backend/schema combination passed anonymous gateway smoke; other upgrade or rollback combinations are not certified"
+}
