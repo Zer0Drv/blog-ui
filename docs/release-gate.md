@@ -22,4 +22,4 @@ GitHub artifact 保留 90 天，PR CI 也执行清单生成和上传，以便在
 
 运行 `pnpm test`、`pnpm build`；工作流语法另用 actionlint 验证。合并后首次 main 发布需确认完整 reusable CI 调用、artifact 下载、校验与 MinIO 同步。测试和本地验证不运行生产同步，也未把真实浏览器或网关业务冒烟计为通过。
 
-本次推进 #58 的前端正常发布门禁；实际网关首页/文章/API 冒烟、前后端与 migration 兼容记录、浏览器 E2E 和备份恢复演练仍待完成。
+正常发布在同步后执行[网关首页/文章/API 冒烟](gateway-smoke.md)，记录精确前端 SHA 与检查结果，失败令 CD 失败且不自动回滚。实际部署证据以合并后 CD artifact 为准。前后端与 migration 兼容记录、历史回滚后验证、浏览器 E2E 和备份恢复演练仍待完成。

@@ -206,7 +206,8 @@ src/
   **版本归档**：每次发布把 dist 快照到 `blog-frontend-releases/sha-<8位>/`（独立桶，不回删）。
   **回滚**：Actions → CD → Run workflow 填 `rollback_tag` —— 跳过构建，校验归档存在后
   清线上桶并从归档恢复。
-  发布完整性、历史归档兼容与验证边界见 [发布门禁](docs/release-gate.md)；当前尚未覆盖真实浏览器与发布后网关业务冒烟。
+  正常发布同步完成后执行[网关只读业务冒烟](docs/gateway-smoke.md)，核对首页资源、前端 SHA、公开 API 与文章路由；失败令 CD 失败并保留证据。
+  发布完整性、历史归档兼容与验证边界见 [发布门禁](docs/release-gate.md)；真实浏览器、后端独立发布和历史回滚后的网关验证仍待补齐。
 - 协作流程：一切变更走 Issue → 分支 → PR → 所有者审批合并，**禁止直推 main**（详见
   [CONTRIBUTING.md](CONTRIBUTING.md)；含 Conventional Commits 中文摘要、P0/P1/P2 优先级 label、
   hotfix 通道、semver tag 发布约定）。Dependabot 每周一跟踪 npm 与 GitHub Actions 更新
