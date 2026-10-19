@@ -125,6 +125,25 @@ jobs:
           "$BASH" "$GITHUB_WORKSPACE/release-tools/.github/scripts/publish-frontend.sh"
           echo "前端提交：\`$RELEASE_SHA\`；归档：\`$FRONTEND_TAG\`；清单：\`/release.json\`" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: 实际网关业务冒烟
+        if: needs.gate.outputs.rollback == 'false'
+        env:
+          GATEWAY_URL: ${{ vars.GATEWAY_URL || 'http://localhost' }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          report="$RUNNER_TEMP/gateway-smoke-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json"
+          node "$GITHUB_WORKSPACE/release-tools/.github/scripts/gateway-smoke.mjs" "$GATEWAY_URL" "$RELEASE_SHA" > "$report"
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 保存网关冒烟证据
+        if: always() && needs.gate.outputs.rollback == 'false'
+        uses: actions/upload-artifact@v7
+        with:
+          name: gateway-smoke-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/gateway-smoke-${{ github.run_id }}-${{ github.run_attempt }}.json
+          retention-days: 90
+          if-no-files-found: warn
+
       - name: 恢复历史归档
         if: needs.gate.outputs.rollback == 'true'
         env:

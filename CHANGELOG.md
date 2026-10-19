@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- 正常前端发布后执行网关只读业务冒烟，核对首页入口资源、完整发布 SHA、公开 API 与文章路由，保存成功/失败报告；新增真实 HTTP 故障回归（Refs [blog#58](https://github.com/Zer0Drv/blog/issues/58)）。
+
 ## [1.1.0] - 2026-10-16
 
 ### Added
