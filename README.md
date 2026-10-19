@@ -200,6 +200,7 @@ src/
 - CI（`.github/workflows/ci.yml`）：push/PR 到 main 触发，**Node 24 + pnpm 12**（与本地工具链对齐，
   Node 20 已 EOL），`pnpm install --frozen-lockfile` 严格模式（lockfile 未同步直接失败），
   随后依次 `pnpm test`、`pnpm build`。
+- 真实浏览器：[Playwright E2E](docs/browser-e2e.md) 运行真实前后端及隔离 MySQL/Redis/MinIO，覆盖登录、编辑/自动保存/刷新恢复、导入路由、附件、权限和断网保护；两仓完整 CI/CD 均等待该必需 job，失败日志/截图/trace 保留 7 天。
 - CD（`.github/workflows/cd.yml`）：push main 触发（按 `src/`、`package.json` 等路径过滤，
   提交信息带 `[skip cd]` 可跳过）：复用同一 SHA 的完整 CI/test/build → production 审批 → 自托管 runner 校验产物提交及文件校验和后同步到部署机
   MinIO `blog-frontend` 桶（Nginx 网关边缘缓存直出，`index.html` no-cache 即时生效）。
@@ -207,7 +208,7 @@ src/
   **回滚**：Actions → CD → Run workflow 填 `rollback_tag` —— 跳过构建，校验归档存在后
   清线上桶并从归档恢复。
   正常发布同步完成后执行[网关只读业务冒烟](docs/gateway-smoke.md)，核对首页资源、前端 SHA、公开 API 与文章路由，并记录后端镜像身份和 Flyway 版本；失败令 CD 失败并保留证据。
-  发布完整性、历史归档兼容与验证边界见 [发布门禁](docs/release-gate.md)；真实浏览器、后端独立发布和历史回滚后的网关验证仍待补齐。
+  发布完整性、历史归档兼容与验证边界见 [发布门禁](docs/release-gate.md)；隔离浏览器另见专用 E2E，后端独立发布和历史回滚后的网关现场验证仍待补齐。
 - 协作流程：一切变更走 Issue → 分支 → PR → 所有者审批合并，**禁止直推 main**（详见
   [CONTRIBUTING.md](CONTRIBUTING.md)；含 Conventional Commits 中文摘要、P0/P1/P2 优先级 label、
   hotfix 通道、semver tag 发布约定）。Dependabot 每周一跟踪 npm 与 GitHub Actions 更新

@@ -46,4 +46,4 @@ node .github/scripts/deployment-evidence.mjs http://localhost <完整前端SHA>
 
 此脚本未运行浏览器 JavaScript，不能证明文章组件正确渲染，也不验证登录、编辑/自动保存、上传或浏览器性能。身份记录只验证本次运行组合，其他跨仓过渡组合仍需隔离环境验收。
 
-当前仅接入正常前端发布。历史回滚可能没有发布清单，保持既有回滚行为；历史产物认证、回滚后冒烟、后端独立发布后的网关检查，以及备份恢复演练仍由 [blog#58](https://github.com/Zer0Drv/blog/issues/58) 跟踪。合并后首次实际正常 CD 的 artifact 才是该提交部署后冒烟证据，本地临时 HTTP 测试不计为生产验收。
+当前仅接入正常前端发布。隔离账号的真实浏览器自动化另见 [浏览器 E2E](browser-e2e.md)。历史回滚可能没有发布清单，保持既有回滚行为；历史产物认证、回滚后冒烟、后端独立发布后的网关检查，以及备份恢复演练仍由 [blog#58](https://github.com/Zer0Drv/blog/issues/58) 跟踪。合并后首次实际正常 CD 的 artifact 才是该提交部署后冒烟证据，本地临时 HTTP 测试不计为生产验收。

@@ -1,4 +1,6 @@
 node_modules/
+e2e-artifacts/
+/backend-e2e/
 dist/
 .DS_Store
 *.log
