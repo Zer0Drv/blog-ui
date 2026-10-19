@@ -135,6 +135,7 @@ it('runs smoke after verified publishing on normal CD and retains failure eviden
   const step = workflow.slice(smoke, evidence)
   expect(step).toContain("if: needs.gate.outputs.rollback == 'false'")
   expect(step).toContain('"$GATEWAY_URL" "$RELEASE_SHA"')
+  expect(step).toContain('/.github/scripts/deployment-evidence.mjs')
   expect(step).not.toContain('continue-on-error')
   expect(workflow.slice(evidence)).toContain("if: always() && needs.gate.outputs.rollback == 'false'")
 })
