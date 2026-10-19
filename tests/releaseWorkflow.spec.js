@@ -185,3 +185,17 @@ it('requires the whole same-commit CI and production approval before consuming i
     expect(step).not.toMatch(/^\s+if:/m)
   }
 })
+
+it('includes real browser E2E in complete reusable CI without optional execution', async () => {
+  const ci = await readFile(join(root, '.github/workflows/ci.yml'), 'utf8')
+  const e2e = jobSection(ci, 'browser-e2e')
+  expect(e2e).not.toMatch(/^    if:/m)
+  expect(e2e).not.toContain('continue-on-error:')
+  expect(e2e).toContain('repository: Zer0Drv/blog')
+  expect(e2e).toMatch(/ref: [a-f0-9]{40}/)
+  const browserStep = e2e.split(/\r?\n\s+- name:/).find(step => step.includes('run: pnpm test:e2e'))
+  expect(browserStep).toBeDefined()
+  expect(browserStep).not.toMatch(/^\s+if:/m)
+  expect(e2e).toContain('if: always()')
+  expect(e2e).toContain('path: e2e-artifacts/')
+})

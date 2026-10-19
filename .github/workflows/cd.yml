@@ -22,6 +22,8 @@ on:
       - '.github/scripts/**'
       - '.gitattributes'
       - 'tests/**'
+      - 'e2e/**'
+      - 'playwright.config.*'
       - 'pnpm-workspace.yaml'
   workflow_dispatch:
     inputs:
