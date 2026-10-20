@@ -88,7 +88,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: Zer0Drv/blog
-          ref: 78e8a743119bd3727fa9e3255b08174987a6d8b1
+          ref: ba612d7298d9797ee2e5f2353009ee5097139dd5
           path: backend-e2e
           persist-credentials: false
       - uses: actions/setup-java@v6
