@@ -38,6 +38,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   # ---- 门控：限定 main，解析跳过标记与回滚输入 ----
@@ -95,18 +96,20 @@ jobs:
         shell: 'D:\Git\bin\bash.exe --noprofile --norc -eo pipefail {0}'
     steps:
       - name: 获取同提交的校验工具
-        if: needs.gate.outputs.rollback == 'false'
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           path: release-tools
-          sparse-checkout: .github/scripts
+          sparse-checkout: .github
 
       - name: Set up Node.js
-        if: needs.gate.outputs.rollback == 'false'
         uses: actions/setup-node@v7
         with:
           node-version: 24
+
+      - name: 串行化现场发布与备份
+        id: deployment_lock
+        run: node "$GITHUB_WORKSPACE/release-tools/.github/scripts/deployment-lock.mjs" acquire "blog-ui-${{ github.run_id }}-${{ github.run_attempt }}"
 
       - name: 下载构建产物（回滚模式不需要）
         if: needs.gate.outputs.rollback == 'false'
@@ -127,18 +130,41 @@ jobs:
           "$BASH" "$GITHUB_WORKSPACE/release-tools/.github/scripts/publish-frontend.sh"
           echo "前端提交：\`$RELEASE_SHA\`；归档：\`$FRONTEND_TAG\`；清单：\`/release.json\`" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: 下载并认证历史归档
+        id: rollback
+        if: needs.gate.outputs.rollback == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_COMPATIBILITY_JSON: ${{ vars.FRONTEND_ROLLBACK_COMPATIBILITY }}
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+          FRONTEND_TAG: ${{ inputs.rollback_tag }}
+          GATEWAY_URL: ${{ vars.GATEWAY_URL || 'http://localhost' }}
+        run: |
+          stage="$RUNNER_TEMP/rollback-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir -p "$stage"
+          mc alias set deploy http://localhost:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+          mc cp --recursive "deploy/blog-frontend-releases/$FRONTEND_TAG/dist/" "$stage/"
+          node "$GITHUB_WORKSPACE/release-tools/.github/scripts/certify-rollback.mjs" \
+            "$stage/dist" "$FRONTEND_TAG" "$GITHUB_WORKSPACE/release-tools/.github/release-compatibility.json" "$GATEWAY_URL"
+          # 认证完成前不删除、不写入线上桶；认证后的本地副本是唯一发布来源。
+          mc mirror --overwrite --remove "$stage/dist/" deploy/blog-frontend/
+
       - name: 实际网关业务冒烟
-        if: needs.gate.outputs.rollback == 'false'
         env:
           GATEWAY_URL: ${{ vars.GATEWAY_URL || 'http://localhost' }}
-          RELEASE_SHA: ${{ github.sha }}
+          RELEASE_SHA: ${{ steps.rollback.outputs.sha || github.sha }}
+          CERTIFIED_BACKEND_SHA: ${{ steps.rollback.outputs.backendSha }}
         run: |
           report="$RUNNER_TEMP/gateway-smoke-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json"
           node "$GITHUB_WORKSPACE/release-tools/.github/scripts/deployment-evidence.mjs" "$GATEWAY_URL" "$RELEASE_SHA" > "$report"
+          if [[ -n "$CERTIFIED_BACKEND_SHA" ]]; then
+            node -e 'const r=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")); if(r.backend.revision!==process.env.CERTIFIED_BACKEND_SHA) process.exit(1)' "$report"
+          fi
           cat "$report" >> "$GITHUB_STEP_SUMMARY"
 
       - name: 保存网关冒烟证据
-        if: always() && needs.gate.outputs.rollback == 'false'
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: gateway-smoke-${{ github.sha }}-${{ github.run_attempt }}
@@ -146,18 +172,6 @@ jobs:
           retention-days: 90
           if-no-files-found: warn
 
-      - name: 恢复历史归档
-        if: needs.gate.outputs.rollback == 'true'
-        env:
-          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
-          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
-          FRONTEND_TAG: ${{ inputs.rollback_tag }}
-        run: |
-          mc alias set deploy http://localhost:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
-          # 保留旧归档布局与已验证的 cp 语义；历史产物认证和回滚后业务冒烟继续由 #58 跟踪。
-          if [ -z "$(mc ls "deploy/blog-frontend-releases/$FRONTEND_TAG/dist/" 2>/dev/null)" ]; then
-            echo "归档不存在：$FRONTEND_TAG（见 MinIO blog-frontend-releases 桶）"; exit 1
-          fi
-          mc rm --recursive --force deploy/blog-frontend/
-          mc cp --recursive "deploy/blog-frontend-releases/$FRONTEND_TAG/dist/" deploy/blog-frontend/
-          echo "已回滚到 $FRONTEND_TAG" >> "$GITHUB_STEP_SUMMARY"
+      - name: 释放现场操作锁
+        if: always() && steps.deployment_lock.outcome == 'success'
+        run: node "$GITHUB_WORKSPACE/release-tools/.github/scripts/deployment-lock.mjs" release "blog-ui-${{ github.run_id }}-${{ github.run_attempt }}"
