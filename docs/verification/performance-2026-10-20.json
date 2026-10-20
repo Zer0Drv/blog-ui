@@ -542,5 +542,527 @@
         }
       ]
     }
+  ],
+  "localSupplement": [
+    {
+      "name": "before",
+      "versions": {
+        "runId": "cd3bd59e97fe4cc8bbd17ff40375ebfb",
+        "project": "blog-browser-e2e-cd3bd59e97fe",
+        "frontendSha": "0d94c88d9c851f51ac1a815e7176853a4cdd7c24",
+        "backendSha": "ba612d7298d9797ee2e5f2353009ee5097139dd5",
+        "frontendMode": "production-preview",
+        "sourceDirty": {
+          "frontend": true,
+          "backend": false
+        },
+        "backendPort": 28082,
+        "frontendPort": 25173,
+        "mysqlPort": 23307,
+        "redisPort": 26379,
+        "minioPort": 29000,
+        "note": "Dedicated tmpfs services; test-only seeded accounts; no production ports, volumes or credentials"
+      },
+      "environment": {
+        "browser": "156.0.8078.4",
+        "node": "v22.23.2",
+        "platform": "win32",
+        "cpu": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+        "logicalCpus": 12,
+        "viewport": {
+          "width": 1365,
+          "height": 900
+        },
+        "deviceScaleFactor": 1,
+        "cpuSlowdown": 4,
+        "network": {
+          "latencyMs": 40,
+          "downloadBytesPerSecond": 200000,
+          "uploadBytesPerSecond": 93750
+        },
+        "cache": "new context and disabled HTTP cache for each sample",
+        "samplesPerPage": 3
+      },
+      "fixture": {
+        "title": "Performance fixture: Markdown, formula and diagram",
+        "contentSha256": "6541c88bfdfde47de80cb850bae6dfd5bc4fbe3e4c40b586f3fe07c10a914660",
+        "contentBytes": 2480
+      },
+      "complete": true,
+      "medians": {
+        "home": {
+          "lcpMs": 5716,
+          "fcpMs": 5552,
+          "cls": 0.03343123765394827,
+          "longTaskMs": 1429,
+          "labInteractionMaxMs": 24
+        },
+        "article": {
+          "lcpMs": 6636,
+          "fcpMs": 5840,
+          "cls": 0.7795197395197395,
+          "longTaskMs": 1821,
+          "labInteractionMaxMs": 32
+        },
+        "editor": {
+          "lcpMs": 11424,
+          "fcpMs": 10208,
+          "cls": 0,
+          "longTaskMs": 3691,
+          "labInteractionMaxMs": 32
+        }
+      },
+      "samples": [
+        {
+          "name": "home",
+          "iteration": 1,
+          "lcpMs": 5944,
+          "fcpMs": 5656,
+          "cls": 0.03343123765394827,
+          "longTaskMs": 1596,
+          "labInteractionMaxMs": 16,
+          "totals": {
+            "js": {
+              "raw": 2324266,
+              "gzip": 699348,
+              "brotli": 564191
+            },
+            "css": {
+              "raw": 395741,
+              "gzip": 57840,
+              "brotli": 45002
+            }
+          }
+        },
+        {
+          "name": "home",
+          "iteration": 2,
+          "lcpMs": 5716,
+          "fcpMs": 5552,
+          "cls": 0.03343123765394827,
+          "longTaskMs": 1429,
+          "labInteractionMaxMs": 24,
+          "totals": {
+            "js": {
+              "raw": 2324266,
+              "gzip": 699348,
+              "brotli": 564191
+            },
+            "css": {
+              "raw": 395741,
+              "gzip": 57840,
+              "brotli": 45002
+            }
+          }
+        },
+        {
+          "name": "home",
+          "iteration": 3,
+          "lcpMs": 5660,
+          "fcpMs": 5484,
+          "cls": 0.03343123765394827,
+          "longTaskMs": 1319,
+          "labInteractionMaxMs": 48,
+          "totals": {
+            "js": {
+              "raw": 2324266,
+              "gzip": 699348,
+              "brotli": 564191
+            },
+            "css": {
+              "raw": 395741,
+              "gzip": 57840,
+              "brotli": 45002
+            }
+          }
+        },
+        {
+          "name": "article",
+          "iteration": 1,
+          "lcpMs": 6636,
+          "fcpMs": 5840,
+          "cls": 0.7795197395197395,
+          "longTaskMs": 1925,
+          "labInteractionMaxMs": 40,
+          "totals": {
+            "js": {
+              "raw": 2607799,
+              "gzip": 807574,
+              "brotli": 654953
+            },
+            "css": {
+              "raw": 457954,
+              "gzip": 69754,
+              "brotli": 55270
+            }
+          }
+        },
+        {
+          "name": "article",
+          "iteration": 2,
+          "lcpMs": 6848,
+          "fcpMs": 5868,
+          "cls": 0.7795197395197395,
+          "longTaskMs": 1821,
+          "labInteractionMaxMs": 32,
+          "totals": {
+            "js": {
+              "raw": 2607799,
+              "gzip": 807574,
+              "brotli": 654953
+            },
+            "css": {
+              "raw": 457954,
+              "gzip": 69754,
+              "brotli": 55270
+            }
+          }
+        },
+        {
+          "name": "article",
+          "iteration": 3,
+          "lcpMs": 6516,
+          "fcpMs": 5740,
+          "cls": 0.7795197395197395,
+          "longTaskMs": 1625,
+          "labInteractionMaxMs": 24,
+          "totals": {
+            "js": {
+              "raw": 2607799,
+              "gzip": 807574,
+              "brotli": 654953
+            },
+            "css": {
+              "raw": 457954,
+              "gzip": 69754,
+              "brotli": 55270
+            }
+          }
+        },
+        {
+          "name": "editor",
+          "iteration": 1,
+          "lcpMs": 13172,
+          "fcpMs": 11600,
+          "cls": 0,
+          "longTaskMs": 5625,
+          "labInteractionMaxMs": 176,
+          "totals": {
+            "js": {
+              "raw": 4116822,
+              "gzip": 1320093,
+              "brotli": 1031644
+            },
+            "css": {
+              "raw": 544078,
+              "gzip": 84864,
+              "brotli": 68447
+            }
+          }
+        },
+        {
+          "name": "editor",
+          "iteration": 2,
+          "lcpMs": 11044,
+          "fcpMs": 9960,
+          "cls": 0,
+          "longTaskMs": 3281,
+          "labInteractionMaxMs": 32,
+          "totals": {
+            "js": {
+              "raw": 4116822,
+              "gzip": 1320093,
+              "brotli": 1031644
+            },
+            "css": {
+              "raw": 544078,
+              "gzip": 84864,
+              "brotli": 68447
+            }
+          }
+        },
+        {
+          "name": "editor",
+          "iteration": 3,
+          "lcpMs": 11424,
+          "fcpMs": 10208,
+          "cls": 0,
+          "longTaskMs": 3691,
+          "labInteractionMaxMs": 24,
+          "totals": {
+            "js": {
+              "raw": 4116822,
+              "gzip": 1320093,
+              "brotli": 1031644
+            },
+            "css": {
+              "raw": 544078,
+              "gzip": 84864,
+              "brotli": 68447
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "after",
+      "versions": {
+        "runId": "88d768f7848b4852b90f8bca8d24b054",
+        "project": "blog-browser-e2e-88d768f7848b",
+        "frontendSha": "b11119f47db79efae3dd9e343ad1bdd110b131e0",
+        "backendSha": "ba612d7298d9797ee2e5f2353009ee5097139dd5",
+        "frontendMode": "production-preview",
+        "sourceDirty": {
+          "frontend": true,
+          "backend": false
+        },
+        "backendPort": 28082,
+        "frontendPort": 25173,
+        "mysqlPort": 23307,
+        "redisPort": 26379,
+        "minioPort": 29000,
+        "note": "Dedicated tmpfs services; test-only seeded accounts; no production ports, volumes or credentials"
+      },
+      "environment": {
+        "browser": "156.0.8078.4",
+        "node": "v22.23.2",
+        "platform": "win32",
+        "cpu": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+        "logicalCpus": 12,
+        "viewport": {
+          "width": 1365,
+          "height": 900
+        },
+        "deviceScaleFactor": 1,
+        "cpuSlowdown": 4,
+        "network": {
+          "latencyMs": 40,
+          "downloadBytesPerSecond": 200000,
+          "uploadBytesPerSecond": 93750
+        },
+        "cache": "new context and disabled HTTP cache for each sample",
+        "samplesPerPage": 3
+      },
+      "fixture": {
+        "title": "Performance fixture: Markdown, formula and diagram",
+        "contentSha256": "6541c88bfdfde47de80cb850bae6dfd5bc4fbe3e4c40b586f3fe07c10a914660",
+        "contentBytes": 2480
+      },
+      "complete": true,
+      "medians": {
+        "home": {
+          "lcpMs": 4828,
+          "fcpMs": 4476,
+          "cls": 0.03343123765394827,
+          "longTaskMs": 2098,
+          "labInteractionMaxMs": 40
+        },
+        "article": {
+          "lcpMs": 7044,
+          "fcpMs": 6072,
+          "cls": 0.7795197395197395,
+          "longTaskMs": 3290,
+          "labInteractionMaxMs": 40
+        },
+        "editor": {
+          "lcpMs": 13068,
+          "fcpMs": 11520,
+          "cls": 0,
+          "longTaskMs": 5595,
+          "labInteractionMaxMs": 48
+        }
+      },
+      "samples": [
+        {
+          "name": "home",
+          "iteration": 1,
+          "lcpMs": 5008,
+          "fcpMs": 4516,
+          "cls": 0.03343123765394827,
+          "longTaskMs": 2110,
+          "labInteractionMaxMs": 40,
+          "totals": {
+            "js": {
+              "raw": 1148504,
+              "gzip": 381518,
+              "brotli": 315365
+            },
+            "css": {
+              "raw": 364632,
+              "gzip": 48943,
+              "brotli": 37963
+            }
+          }
+        },
+        {
+          "name": "home",
+          "iteration": 2,
+          "lcpMs": 4588,
+          "fcpMs": 4284,
+          "cls": 0.03343123765394827,
+          "longTaskMs": 1877,
+          "labInteractionMaxMs": 48,
+          "totals": {
+            "js": {
+              "raw": 1148504,
+              "gzip": 381518,
+              "brotli": 315365
+            },
+            "css": {
+              "raw": 364632,
+              "gzip": 48943,
+              "brotli": 37963
+            }
+          }
+        },
+        {
+          "name": "home",
+          "iteration": 3,
+          "lcpMs": 4828,
+          "fcpMs": 4476,
+          "cls": 0.03343123765394827,
+          "longTaskMs": 2098,
+          "labInteractionMaxMs": 32,
+          "totals": {
+            "js": {
+              "raw": 1148504,
+              "gzip": 381518,
+              "brotli": 315365
+            },
+            "css": {
+              "raw": 364632,
+              "gzip": 48943,
+              "brotli": 37963
+            }
+          }
+        },
+        {
+          "name": "article",
+          "iteration": 1,
+          "lcpMs": 7036,
+          "fcpMs": 6024,
+          "cls": 0.7795197395197395,
+          "longTaskMs": 2645,
+          "labInteractionMaxMs": 40,
+          "totals": {
+            "js": {
+              "raw": 4078443,
+              "gzip": 1257228,
+              "brotli": 1005200
+            },
+            "css": {
+              "raw": 457955,
+              "gzip": 69203,
+              "brotli": 55495
+            }
+          }
+        },
+        {
+          "name": "article",
+          "iteration": 2,
+          "lcpMs": 7044,
+          "fcpMs": 6168,
+          "cls": 0.7795197395197395,
+          "longTaskMs": 3290,
+          "labInteractionMaxMs": 32,
+          "totals": {
+            "js": {
+              "raw": 4078443,
+              "gzip": 1257228,
+              "brotli": 1005200
+            },
+            "css": {
+              "raw": 457955,
+              "gzip": 69203,
+              "brotli": 55495
+            }
+          }
+        },
+        {
+          "name": "article",
+          "iteration": 3,
+          "lcpMs": 7280,
+          "fcpMs": 6072,
+          "cls": 0.7795197395197395,
+          "longTaskMs": 3725,
+          "labInteractionMaxMs": 168,
+          "totals": {
+            "js": {
+              "raw": 4078443,
+              "gzip": 1257228,
+              "brotli": 1005200
+            },
+            "css": {
+              "raw": 457955,
+              "gzip": 69203,
+              "brotli": 55495
+            }
+          }
+        },
+        {
+          "name": "editor",
+          "iteration": 1,
+          "lcpMs": 13068,
+          "fcpMs": 11520,
+          "cls": 0,
+          "longTaskMs": 5595,
+          "labInteractionMaxMs": 40,
+          "totals": {
+            "js": {
+              "raw": 4108532,
+              "gzip": 1317685,
+              "brotli": 1033365
+            },
+            "css": {
+              "raw": 544079,
+              "gzip": 84313,
+              "brotli": 68671
+            }
+          }
+        },
+        {
+          "name": "editor",
+          "iteration": 2,
+          "lcpMs": 12388,
+          "fcpMs": 10944,
+          "cls": 0,
+          "longTaskMs": 4768,
+          "labInteractionMaxMs": 48,
+          "totals": {
+            "js": {
+              "raw": 4108532,
+              "gzip": 1317685,
+              "brotli": 1033365
+            },
+            "css": {
+              "raw": 544079,
+              "gzip": 84313,
+              "brotli": 68671
+            }
+          }
+        },
+        {
+          "name": "editor",
+          "iteration": 3,
+          "lcpMs": 17584,
+          "fcpMs": 15244,
+          "cls": 0,
+          "longTaskMs": 10453,
+          "labInteractionMaxMs": 56,
+          "totals": {
+            "js": {
+              "raw": 4108532,
+              "gzip": 1317685,
+              "brotli": 1033365
+            },
+            "css": {
+              "raw": 544079,
+              "gzip": 84313,
+              "brotli": 68671
+            }
+          }
+        }
+      ]
+    }
   ]
 }

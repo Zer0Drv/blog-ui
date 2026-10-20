@@ -42,4 +42,18 @@ Linux 使用 `BACKEND_E2E_DIR=/path/to/blog pnpm test:performance`。端口被�
 
 比较优化时，使用相同脚本/硬件/夹具/节流条件，保留优化前后原始数据。优先比较确定性的资源体积与加载范围，再讨论时间变化；不得调高 chunk warning 阈值代替优化，也不得移除消毒、公式、代码或图表功能。
 
+## 2026-10-20 首次对照
+
+[已归档摘要](verification/performance-2026-10-20.json) 对应优化前 [CI 39384024794](https://github.com/Zer0Drv/blog-ui/actions/runs/39384024794) 与优化后 [CI 39384321417](https://github.com/Zer0Drv/blog-ui/actions/runs/39384321417)。两轮完整 CI 均通过，生产源码差异为把 `mdEditorConfig` 从 main 移到 Markdown 预览、文章编辑和独立页面编辑入口；模块单例在挂载前配置，保留原实例、样式和消毒函数。
+
+| 页面 | 已完成 JS gzip 估算：前 → 后 | CI LCP 中位数：前 → 后 | CI CLS：前 → 后 |
+| --- | --- | --- | --- |
+| 首页 | 682.9 → 372.6 KiB（减少 45.4%） | 4,924 → 3,224 ms | 0.0214 → 0.0214 |
+| 文章页 | 788.6 → 786.3 KiB | 5,448 → 5,764 ms | 0.7797 → 0.7797 |
+| 编辑页 | 1,289.1 → 1,286.8 KiB | 9,424 → 10,004 ms | 0 → 0 |
+
+**体积变化可确定，耗时不能全部归因于代码。** GitHub 两次 runner 分别为 AMD EPYC 9V74 与 7763，虽均为四核且节流相同，硬件并不一致。表中资源是窗口内已完成项，不能作为文章/编辑页最终总下载量；后续报告额外用 `network` 与 `requestedAssets` 列出在途项，避免漏报晚加载的 Mermaid 资源。
+
+同一台本地 i7-9750H、Chromium 156、Node 22 的补充采样：首页 LCP 5,716 → 4,828 ms，文章页 6,636 → 7,044 ms，编辑页 11,424 → 13,068 ms。没有把首页收益推广到其他页面；文章/编辑页仍需进一步分析请求瀑布和执行成本，文章 CLS 约 0.78 的问题仍存在。真实用户 INP、部署网关压缩和实际设备分布未验证；本次不是“全部页面性能达标”的验收。
+
 参考：[INP 定义与测量边界](https://web.dev/articles/inp)、[Chromium Network 节流](https://chromedevtools.github.io/devtools-protocol/tot/Network/)、[CPU 节流](https://chromedevtools.github.io/devtools-protocol/tot/Emulation/)。
