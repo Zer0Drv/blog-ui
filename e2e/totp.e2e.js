@@ -53,6 +53,6 @@ test('bind local QR → preserve recovery codes → password challenge → rejec
   await settings.locator('input[type=password]').fill(password)
   await settings.locator('input[autocomplete=one-time-code]').fill(codes[1])
   await settings.getByRole('button', { name: '关闭两步验证' }).click()
-  await page.getByRole('button', { name: '确定', exact: true }).click()
+  await page.getByRole('dialog', { name: '安全设置' }).getByRole('button', { name: 'OK', exact: true }).click()
   await expect(settings).toContainText('所有设备需要重新登录')
 })
