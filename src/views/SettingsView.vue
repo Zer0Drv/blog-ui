@@ -66,6 +66,7 @@
     </el-card>
 
     <SubscriptionSettings />
+    <TotpSettings />
     <!-- 通知偏好卡片 -->
     <el-card class="settings-card">
       <template #header>
@@ -90,6 +91,7 @@ import { updateMyProfile, changeMyPassword, getMyPreferences, updateMyPreference
 import { uploadImage, resolveUploadUrl } from '../api/upload'
 import { notifyProfileUpdated } from '../utils/profileSync'
 import SubscriptionSettings from '../components/SubscriptionSettings.vue'
+import TotpSettings from '../components/TotpSettings.vue'
 
 const router = useRouter()
 const auth = useAuthStore()

@@ -17,6 +17,37 @@ vi.mock('../realtime', () => ({
 }))
 
 describe('auth store（Cookie 会话，#13）', () => {
+  it('密码与 OAuth 挑战都不提前建立会话或持久化凭据', async () => {
+    setActivePinia(createPinia())
+    const auth = useAuthStore()
+    http.post.mockResolvedValue({ mfa_required: 'true', challenge: 'memory-only' })
+    http.get.mockClear()
+    expect(await auth.login({ username: 'neo', password: 'secret' })).toEqual({ mfaRequired: true })
+    expect(auth.mfaChallenge).toBe('memory-only')
+    expect(auth.isLoggedIn).toBe(false)
+    expect(http.get).not.toHaveBeenCalled()
+    expect(await auth.exchangeOAuthCode('oauth-code')).toEqual({ mfaRequired: true })
+    expect(http.get).not.toHaveBeenCalled()
+    expect(localStorage.length).toBe(0)
+    http.post.mockResolvedValue({})
+    http.get.mockResolvedValue({ id: 1, username: 'neo' })
+    await auth.completeMfa('123456')
+    expect(http.post).toHaveBeenLastCalledWith('/auth/totp/login', { challenge: 'memory-only', code: '123456' })
+    expect(auth.mfaChallenge).toBeNull()
+    expect(auth.isLoggedIn).toBe(true)
+  })
+  it('第二因子失败不读取用户，取消后不可继续提交', async () => {
+    setActivePinia(createPinia())
+    const auth = useAuthStore()
+    auth.mfaChallenge = 'challenge'
+    http.post.mockRejectedValue(new Error('invalid'))
+    http.get.mockClear()
+    await expect(auth.completeMfa('bad')).rejects.toThrow('invalid')
+    expect(http.get).not.toHaveBeenCalled()
+    expect(auth.isLoggedIn).toBe(false)
+    auth.cancelMfa()
+    await expect(auth.completeMfa('123456')).rejects.toThrow('请重新登录')
+  })
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())

@@ -29,7 +29,11 @@ onMounted(async () => {
     return
   }
   try {
-    await auth.exchangeOAuthCode(String(code))
+    const result = await auth.exchangeOAuthCode(String(code))
+    if (result?.mfaRequired) {
+      await router.replace({ name: 'totp-login' })
+      return
+    }
     ElMessage.success('GitHub 登录成功')
     router.replace('/')
   } catch {

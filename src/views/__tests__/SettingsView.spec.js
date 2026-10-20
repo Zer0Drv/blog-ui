@@ -4,6 +4,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import SettingsView from '../SettingsView.vue'
 vi.mock('../../components/SubscriptionSettings.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../../components/TotpSettings.vue', () => ({ default: { template: '<div />' } }))
 import { useAuthStore } from '../../stores/auth'
 import { updateMyProfile } from '../../api/user'
 import { notifyProfileUpdated } from '../../utils/profileSync'

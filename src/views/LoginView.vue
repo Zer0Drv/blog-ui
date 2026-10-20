@@ -175,12 +175,17 @@ async function onLogin() {
   try {
     // store 是 /auth/login 唯一调用方（#22）；后端校验通过后 Set-Cookie（AUTH_TOKEN, HttpOnly），
     // 前端不持有 token，login 内部经 fetchMe 建立会话（#13）
-    await auth.login({
+    const result = await auth.login({
       username: loginForm.username,
       password: loginForm.password,
       ...captchaPayload(loginCaptcha)
     })
     clearCaptcha(loginCaptcha)
+    loginForm.password = ''
+    if (result?.mfaRequired) {
+      await router.push({ name: 'totp-login', query: route.query.redirect ? { redirect: route.query.redirect } : {} })
+      return
+    }
     ElMessage.success('登录成功')
     // 401 过期跳来的（?redirect=）回原页面，其余回首页
     router.push(route.query.redirect ? String(route.query.redirect) : { name: 'home' })
