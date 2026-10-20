@@ -68,7 +68,7 @@ test('production home, article and editor: three cold samples', async ({ browser
           await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
           await cdp.send('Network.emulateNetworkConditionsByRule', {
             offline: false, matchedNetworkConditions: [{
-              urlPattern: '*', latency: 40, downloadThroughput: 200000, uploadThroughput: 93750
+              urlPattern: '', latency: 40, downloadThroughput: 200000, uploadThroughput: 93750
             }]
           })
           await page.addInitScript(observeMetrics)
@@ -93,6 +93,11 @@ test('production home, article and editor: three cold samples', async ({ browser
           expect(raw.lcpMs).toBeGreaterThan(0)
           expect(raw.fcpMs).toBeGreaterThan(0)
           expect(errors).toEqual([])
+          // Detect a no-op CDP throttling rule rather than publishing an incorrectly
+          // labelled baseline. Allow scheduling/timing tolerance but not LAN throughput.
+          const largeResponse = raw.resources.find(resource => resource.encodedBodyBytes > 100000 && resource.transferBytes > 0)
+          expect(largeResponse).toBeTruthy()
+          expect(largeResponse.durationMs).toBeGreaterThan(largeResponse.encodedBodyBytes / 200000 * 1000 * 0.7)
           const assets = await assetSizes(raw.resources)
           const { events, ...metrics } = raw
           const sample = { name, iteration, ...metrics, ...interactionSummary(events), assets,
