@@ -1,6 +1,8 @@
 // md-editor-v3 全局配置：以 bundle 内实例注入 highlight.js / katex / mermaid，
 // 覆盖其默认的 unpkg CDN 地址（editorExtensions 硬编码 https://unpkg.com），
 // 避免浏览器 Tracking Prevention 拦截第三方域请求导致代码高亮/公式/流程图渲染降级。
+// 由 Markdown 预览及编辑入口导入，沿用路由懒加载；首页不提前加载。
+// ES module 单例保证配置一次，并在组件挂载前完成实例注入。
 import { config } from 'md-editor-v3'
 // CDN 的 highlight.min.js 对应 common 语言子集，保持渲染行为一致
 import hljs from 'highlight.js/lib/common'

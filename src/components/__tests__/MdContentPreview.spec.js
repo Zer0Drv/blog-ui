@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import MdContentPreview from '../MdContentPreview.vue'
 import { sanitizeHtml } from '../../utils/sanitize'
+vi.mock('../../lib/mdEditorConfig', () => ({}))
 
 // stub MdPreview：本组件的契约是「sanitize 唯一挂载点 + get-catalog 透传」，
 // 不测 md-editor-v3 自身渲染

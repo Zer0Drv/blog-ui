@@ -10,6 +10,7 @@
 </template>
 
 <script setup>
+import '../lib/mdEditorConfig'
 import { MdPreview } from 'md-editor-v3'
 import 'md-editor-v3/lib/preview.css'
 import { sanitizeHtml } from '../utils/sanitize'

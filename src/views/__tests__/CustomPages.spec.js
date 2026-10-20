@@ -12,6 +12,7 @@ vi.mock('vue-router', () => ({ useRoute: () => ({ params }), useRouter: () => ro
 vi.mock('../../api/page', () => ({ createPage: vi.fn(), updatePage: vi.fn(), getAdminPage: vi.fn(), getPage: vi.fn(), notifyPageNavigationChanged: vi.fn() }))
 vi.mock('../../api/upload', () => ({ uploadAndResolveUrl: vi.fn() }))
 vi.mock('../../composables/useDocumentTitle', () => ({ useDocumentTitle: () => ({ setTitle: vi.fn() }) }))
+vi.mock('../../lib/mdEditorConfig', () => ({}))
 vi.mock('md-editor-v3', () => ({ MdEditor: { props: ['modelValue'], emits: ['update:modelValue'], template: '<textarea class="content-input" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />' } }))
 vi.mock('../../components/RichEditor.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../../components/MdContentPreview.vue', () => ({ default: { props: ['content'], template: '<div class="markdown">{{ content }}</div>' } }))
