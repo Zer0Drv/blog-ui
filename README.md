@@ -240,4 +240,4 @@ src/
 
 已交付的后续功能：slug 固定链接、文章密码保护、友情链接、自定义页面、订阅推送、系统参数和附件观察期清理；对应记录见 [CHANGELOG](CHANGELOG.md)。
 
-后续候选：TOTP 两步验证、AI 摘要/评论审核增强；质量与运维增量继续由 [blog#58](https://github.com/Zer0Drv/blog/issues/58) 跟踪。
+TOTP 两步验证：设置页本地二维码绑定、恢复码管理与两步登录页（含 GitHub 登录），需先部署后端 V17 并配置独立加密密钥，详见 [后端规程](https://github.com/Zer0Drv/blog/blob/main/docs/totp.md)；验收由 [blog#19](https://github.com/Zer0Drv/blog/issues/19) 跟踪。后续候选：AI 摘要/评论审核增强；质量与运维增量继续由 [blog#58](https://github.com/Zer0Drv/blog/issues/58) 跟踪。

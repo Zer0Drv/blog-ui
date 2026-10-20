@@ -16,6 +16,7 @@ export { CAPTCHA_REQUIRED_CODE } from '../api/captcha'
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
+    mfaChallenge: null,
     // 会话状态机：anonymous（初始/未登录/登出）→ pending（探测中）→ authenticated（已登录）/ expired（会话失效）
     status: 'anonymous',
     // 会话探测是否已执行（路由守卫首次导航时经 /auth/me 恢复会话）
@@ -49,7 +50,9 @@ export const useAuthStore = defineStore('auth', {
         payload.captchaCode = captchaCode
       }
       // 后端校验通过后 Set-Cookie: AUTH_TOKEN（HttpOnly），响应体不再含 token
-      await http.post('/auth/login', payload)
+      this.mfaChallenge = null
+      const result = await http.post('/auth/login', payload)
+      if (this._acceptMfa(result)) return { mfaRequired: true }
       await this.fetchMe()
     },
     async register(form) {
@@ -69,9 +72,25 @@ export const useAuthStore = defineStore('auth', {
     },
     // GitHub OAuth 回跳：一次性 code 换 Cookie 会话（POST /auth/oauth/exchange）
     async exchangeOAuthCode(code) {
-      await http.post('/auth/oauth/exchange', { code })
+      this.mfaChallenge = null
+      const result = await http.post('/auth/oauth/exchange', { code })
+      if (this._acceptMfa(result)) return { mfaRequired: true }
       await this.fetchMe()
     },
+    _acceptMfa(result) {
+      if (result?.mfa_required !== 'true' || !result.challenge) return false
+      this._applyUser(null)
+      this.sessionChecked = true
+      this.mfaChallenge = result.challenge
+      return true
+    },
+    async completeMfa(code) {
+      if (!this.mfaChallenge) throw new Error('请重新登录')
+      await http.post('/auth/totp/login', { challenge: this.mfaChallenge, code })
+      this.mfaChallenge = null
+      await this.fetchMe()
+    },
+    cancelMfa() { this.mfaChallenge = null },
     // 纯取数：GET /auth/me 并迁移会话（去副作用——WS 建连由 _applyUser 迁移时触发）
     async fetchMe() {
       this._applyUser(await http.get('/auth/me'))
@@ -93,6 +112,7 @@ export const useAuthStore = defineStore('auth', {
       this.sessionChecked = true
     },
     async logout() {
+      this.mfaChallenge = null
       // 后端清 Cookie + 拉黑 token；后端报错（如 cookie 已失效）也允许本地登出
       try { await http.post('/auth/logout') } catch { /* 本地登出兜底 */ }
       this._applyUser(null)

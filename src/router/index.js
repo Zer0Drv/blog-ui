@@ -7,6 +7,7 @@ import { syncRouteTitle } from '../composables/useDocumentTitle'
 // meta.title 供页签标题（afterEach 组合为 `<title> - <站点名>`）；
 // 管理后台页自带「- 管理后台」层级，如 站点设置 - 管理后台 - <站点名>
 const routes = [
+  { path: '/login/totp', name: 'totp-login', component: () => import('../views/TotpLoginView.vue'), meta: { public: true, title: '两步验证' } },
   { path: '/login', name: 'login', component: () => import('../views/LoginView.vue'), meta: { public: true, title: '登录' } },
   // GitHub OAuth 回跳（后端 302 带一次性 code，前端换取 Cookie 会话）
   { path: '/oauth/callback', name: 'oauth-callback', component: () => import('../views/OAuthCallbackView.vue'), meta: { public: true, title: '登录' } },
