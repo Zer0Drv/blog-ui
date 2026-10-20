@@ -56,4 +56,6 @@ Linux 使用 `BACKEND_E2E_DIR=/path/to/blog pnpm test:performance`。端口被�
 
 同一台本地 i7-9750H、Chromium 156、Node 22 的补充采样：首页 LCP 5,716 → 4,828 ms，文章页 6,636 → 7,044 ms，编辑页 11,424 → 13,068 ms。没有把首页收益推广到其他页面；文章/编辑页仍需进一步分析请求瀑布和执行成本，文章 CLS 约 0.78 的问题仍存在。真实用户 INP、部署网关压缩和实际设备分布未验证；本次不是“全部页面性能达标”的验收。
 
+补齐在途清单后的 [CI 39385187525](https://github.com/Zer0Drv/blog-ui/actions/runs/39385187525) 核验：首页 14 个同源静态资源全部完成、无在途或外部请求；文章页 30 个完成/31 个已请求，编辑页 31 个完成/32 个已请求，均有晚加载的 ELK。另观察到文章页 ECharts，以及编辑页 screenfull、ECharts、cropperjs、Prettier 的外部请求；本次只保持既有 highlight.js/KaTeX/Mermaid 本地配置，未将其余组件依赖全部本地化。**同源 dist 体积不包含这些第三方资源成本**，外部响应也可能影响耗时；后续评估本地化需另行确认新增依赖，不能为降低指标直接移除现有编辑能力。
+
 参考：[INP 定义与测量边界](https://web.dev/articles/inp)、[Chromium Network 节流](https://chromedevtools.github.io/devtools-protocol/tot/Network/)、[CPU 节流](https://chromedevtools.github.io/devtools-protocol/tot/Emulation/)。
