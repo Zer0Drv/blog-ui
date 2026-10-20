@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { gzipSync, brotliCompressSync, constants } from 'node:zlib'
 import { resolve, sep } from 'node:path'
 
+const compressionCache = new Map()
 // Install before navigation. No page content, credentials, or event targets are collected.
 export function observeMetrics() {
   performance.setResourceTimingBufferSize(3000)
@@ -54,9 +55,13 @@ export async function assetSizes(resources, directory = 'dist') {
     const file = resolve(root, '.' + decodeURIComponent(path))
     if (!file.startsWith(root + sep)) throw new Error('Asset outside dist')
     const bytes = await readFile(file)
-    sizes.push({ path, kind: path.endsWith('.js') ? 'js' : 'css', raw: bytes.length,
-      gzip: gzipSync(bytes, { level: 9 }).length,
-      brotli: brotliCompressSync(bytes, { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } }).length })
+    let cached = compressionCache.get(file)
+    if (!cached || !cached.bytes.equals(bytes)) {
+      cached = { bytes, sizes: { raw: bytes.length, gzip: gzipSync(bytes, { level: 9 }).length,
+        brotli: brotliCompressSync(bytes, { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } }).length } }
+      compressionCache.set(file, cached)
+    }
+    sizes.push({ path, kind: path.endsWith('.js') ? 'js' : 'css', ...cached.sizes })
   }
   return sizes
 }

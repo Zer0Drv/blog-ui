@@ -15,8 +15,8 @@
 
 | 数据 | 口径 |
 | --- | --- |
-| JS/CSS raw、gzip、brotli | 该页面在窗口内实际请求的同源 JS/CSS 文件，去重后读取 dist；gzip level 9、Brotli quality 11 独立压缩估算，不代表部署网关已开启对应编码 |
-| 请求列表 | Resource Timing 路径、类型、耗时、transferSize/encodedBodySize；不含主文档，不收集 query、请求头或响应正文 |
+| JS/CSS raw、gzip、brotli | `assets`/`totals` 为窗口内完成的 Resource Timing 资源；`requestedAssets` 为所有已发起的同源 JS/CSS（含在途请求）。去重后读取 dist，gzip level 9、Brotli quality 11 独立压缩估算，不代表部署网关已开启对应编码 |
+| 请求列表 | `resources` 为已完成 Resource Timing 路径、类型、耗时、transferSize/encodedBodySize（不含主文档）；`network` 同时记录已发起请求的 pending/finished/failed 状态（含主文档）。不收集 query、请求头或响应正文 |
 | FCP/LCP | 当前导航及观察窗口内 PerformanceObserver 的绘制时间；LCP 在首次用户交互后停止更新 |
 | CLS | 排除近期用户输入导致的 shift，取间隔小于一秒、累计小于五秒的最大会话窗口 |
 | longTaskMs | 观察窗口内长任务总耗时，非 Lighthouse TBT |

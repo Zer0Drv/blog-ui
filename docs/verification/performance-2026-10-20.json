@@ -1,0 +1,546 @@
+{
+  "schemaVersion": 1,
+  "note": "Summaries of completed Resource Timing entries only. Full reports retained in linked CI artifacts. Later collector also inventories pending requests. Lab samples are not field INP or production acceptance.",
+  "snapshots": [
+    {
+      "name": "before",
+      "ci": "https://github.com/Zer0Drv/blog-ui/actions/runs/39384024794",
+      "prHead": "0d94c88d9c851f51ac1a815e7176853a4cdd7c24",
+      "versions": {
+        "runId": "dca208716cac43eaa831dfade1d73ac4",
+        "project": "blog-browser-e2e-dca208716cac",
+        "frontendSha": "6dc6280b6317edeb6c3c160152d3e30f50c934cf",
+        "backendSha": "ba612d7298d9797ee2e5f2353009ee5097139dd5",
+        "frontendMode": "production-preview",
+        "sourceDirty": {
+          "frontend": false,
+          "backend": false
+        },
+        "backendPort": 28082,
+        "frontendPort": 25173,
+        "mysqlPort": 23307,
+        "redisPort": 26379,
+        "minioPort": 29000,
+        "note": "Dedicated tmpfs services; test-only seeded accounts; no production ports, volumes or credentials"
+      },
+      "environment": {
+        "browser": "156.0.8078.4",
+        "node": "v24.21.0",
+        "platform": "linux",
+        "cpu": "AMD EPYC 9V74 80-Core Processor",
+        "logicalCpus": 4,
+        "viewport": {
+          "width": 1365,
+          "height": 900
+        },
+        "deviceScaleFactor": 1,
+        "cpuSlowdown": 4,
+        "network": {
+          "latencyMs": 40,
+          "downloadBytesPerSecond": 200000,
+          "uploadBytesPerSecond": 93750
+        },
+        "cache": "new context and disabled HTTP cache for each sample",
+        "samplesPerPage": 3
+      },
+      "fixture": {
+        "title": "Performance fixture: Markdown, formula and diagram",
+        "contentSha256": "6541c88bfdfde47de80cb850bae6dfd5bc4fbe3e4c40b586f3fe07c10a914660",
+        "contentBytes": 2480
+      },
+      "medians": {
+        "home": {
+          "lcpMs": 4924,
+          "fcpMs": 4780,
+          "cls": 0.02144514663195982,
+          "longTaskMs": 709,
+          "labInteractionMaxMs": 16
+        },
+        "article": {
+          "lcpMs": 5448,
+          "fcpMs": 5164,
+          "cls": 0.7796947496947497,
+          "longTaskMs": 778,
+          "labInteractionMaxMs": 16
+        },
+        "editor": {
+          "lcpMs": 9424,
+          "fcpMs": 8676,
+          "cls": 0,
+          "longTaskMs": 1559,
+          "labInteractionMaxMs": 24
+        }
+      },
+      "samples": [
+        {
+          "name": "home",
+          "iteration": 1,
+          "lcpMs": 4924,
+          "fcpMs": 4780,
+          "cls": 0.02144514663195982,
+          "longTaskMs": 709,
+          "labInteractionMaxMs": 16,
+          "observedInteractions": 2,
+          "totals": {
+            "js": {
+              "raw": 2324266,
+              "gzip": 699326,
+              "brotli": 564058
+            },
+            "css": {
+              "raw": 395741,
+              "gzip": 57837,
+              "brotli": 45000
+            }
+          }
+        },
+        {
+          "name": "home",
+          "iteration": 2,
+          "lcpMs": 4952,
+          "fcpMs": 4820,
+          "cls": 0.02144514663195982,
+          "longTaskMs": 763,
+          "labInteractionMaxMs": 16,
+          "observedInteractions": 3,
+          "totals": {
+            "js": {
+              "raw": 2324266,
+              "gzip": 699326,
+              "brotli": 564058
+            },
+            "css": {
+              "raw": 395741,
+              "gzip": 57837,
+              "brotli": 45000
+            }
+          }
+        },
+        {
+          "name": "home",
+          "iteration": 3,
+          "lcpMs": 4872,
+          "fcpMs": 4780,
+          "cls": 0.02144514663195982,
+          "longTaskMs": 666,
+          "labInteractionMaxMs": 16,
+          "observedInteractions": 2,
+          "totals": {
+            "js": {
+              "raw": 2324266,
+              "gzip": 699326,
+              "brotli": 564058
+            },
+            "css": {
+              "raw": 395741,
+              "gzip": 57837,
+              "brotli": 45000
+            }
+          }
+        },
+        {
+          "name": "article",
+          "iteration": 1,
+          "lcpMs": 5472,
+          "fcpMs": 5176,
+          "cls": 0.7796947496947497,
+          "longTaskMs": 805,
+          "labInteractionMaxMs": 16,
+          "observedInteractions": 2,
+          "totals": {
+            "js": {
+              "raw": 2607799,
+              "gzip": 807555,
+              "brotli": 654839
+            },
+            "css": {
+              "raw": 457954,
+              "gzip": 69753,
+              "brotli": 55276
+            }
+          }
+        },
+        {
+          "name": "article",
+          "iteration": 2,
+          "lcpMs": 5444,
+          "fcpMs": 5152,
+          "cls": 0.7796947496947497,
+          "longTaskMs": 774,
+          "labInteractionMaxMs": 16,
+          "observedInteractions": 3,
+          "totals": {
+            "js": {
+              "raw": 2607799,
+              "gzip": 807555,
+              "brotli": 654839
+            },
+            "css": {
+              "raw": 457954,
+              "gzip": 69753,
+              "brotli": 55276
+            }
+          }
+        },
+        {
+          "name": "article",
+          "iteration": 3,
+          "lcpMs": 5448,
+          "fcpMs": 5164,
+          "cls": 0.7796947496947497,
+          "longTaskMs": 778,
+          "labInteractionMaxMs": 16,
+          "observedInteractions": 2,
+          "totals": {
+            "js": {
+              "raw": 2607799,
+              "gzip": 807555,
+              "brotli": 654839
+            },
+            "css": {
+              "raw": 457954,
+              "gzip": 69753,
+              "brotli": 55276
+            }
+          }
+        },
+        {
+          "name": "editor",
+          "iteration": 1,
+          "lcpMs": 9420,
+          "fcpMs": 8672,
+          "cls": 0,
+          "longTaskMs": 1553,
+          "labInteractionMaxMs": 24,
+          "observedInteractions": 4,
+          "totals": {
+            "js": {
+              "raw": 4116822,
+              "gzip": 1320066,
+              "brotli": 1031536
+            },
+            "css": {
+              "raw": 544078,
+              "gzip": 84865,
+              "brotli": 68441
+            }
+          }
+        },
+        {
+          "name": "editor",
+          "iteration": 2,
+          "lcpMs": 9424,
+          "fcpMs": 8676,
+          "cls": 0,
+          "longTaskMs": 1559,
+          "labInteractionMaxMs": 24,
+          "observedInteractions": 3,
+          "totals": {
+            "js": {
+              "raw": 4116822,
+              "gzip": 1320066,
+              "brotli": 1031536
+            },
+            "css": {
+              "raw": 544078,
+              "gzip": 84865,
+              "brotli": 68441
+            }
+          }
+        },
+        {
+          "name": "editor",
+          "iteration": 3,
+          "lcpMs": 9488,
+          "fcpMs": 8724,
+          "cls": 0,
+          "longTaskMs": 1599,
+          "labInteractionMaxMs": 24,
+          "observedInteractions": 4,
+          "totals": {
+            "js": {
+              "raw": 4116822,
+              "gzip": 1320066,
+              "brotli": 1031536
+            },
+            "css": {
+              "raw": 544078,
+              "gzip": 84865,
+              "brotli": 68441
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "after",
+      "ci": "https://github.com/Zer0Drv/blog-ui/actions/runs/39384321417",
+      "prHead": "b11119f47db79efae3dd9e343ad1bdd110b131e0",
+      "versions": {
+        "runId": "41b0c51593bc44cdb98de3515704a4b8",
+        "project": "blog-browser-e2e-41b0c51593bc",
+        "frontendSha": "366bae05243e5ac0bfe5abf6ef8b13dae94338d2",
+        "backendSha": "ba612d7298d9797ee2e5f2353009ee5097139dd5",
+        "frontendMode": "production-preview",
+        "sourceDirty": {
+          "frontend": false,
+          "backend": false
+        },
+        "backendPort": 28082,
+        "frontendPort": 25173,
+        "mysqlPort": 23307,
+        "redisPort": 26379,
+        "minioPort": 29000,
+        "note": "Dedicated tmpfs services; test-only seeded accounts; no production ports, volumes or credentials"
+      },
+      "environment": {
+        "browser": "156.0.8078.4",
+        "node": "v24.21.0",
+        "platform": "linux",
+        "cpu": "AMD EPYC 7763 64-Core Processor",
+        "logicalCpus": 4,
+        "viewport": {
+          "width": 1365,
+          "height": 900
+        },
+        "deviceScaleFactor": 1,
+        "cpuSlowdown": 4,
+        "network": {
+          "latencyMs": 40,
+          "downloadBytesPerSecond": 200000,
+          "uploadBytesPerSecond": 93750
+        },
+        "cache": "new context and disabled HTTP cache for each sample",
+        "samplesPerPage": 3
+      },
+      "fixture": {
+        "title": "Performance fixture: Markdown, formula and diagram",
+        "contentSha256": "6541c88bfdfde47de80cb850bae6dfd5bc4fbe3e4c40b586f3fe07c10a914660",
+        "contentBytes": 2480
+      },
+      "medians": {
+        "home": {
+          "lcpMs": 3224,
+          "fcpMs": 3068,
+          "cls": 0.02144514663195982,
+          "longTaskMs": 636,
+          "labInteractionMaxMs": 24
+        },
+        "article": {
+          "lcpMs": 5764,
+          "fcpMs": 5376,
+          "cls": 0.7796947496947497,
+          "longTaskMs": 1208,
+          "labInteractionMaxMs": 24
+        },
+        "editor": {
+          "lcpMs": 10004,
+          "fcpMs": 9168,
+          "cls": 0,
+          "longTaskMs": 2330,
+          "labInteractionMaxMs": 24
+        }
+      },
+      "samples": [
+        {
+          "name": "home",
+          "iteration": 1,
+          "lcpMs": 3224,
+          "fcpMs": 3032,
+          "cls": 0.02144514663195982,
+          "longTaskMs": 599,
+          "labInteractionMaxMs": 24,
+          "observedInteractions": 4,
+          "totals": {
+            "js": {
+              "raw": 1148504,
+              "gzip": 381535,
+              "brotli": 315366
+            },
+            "css": {
+              "raw": 364632,
+              "gzip": 48940,
+              "brotli": 37961
+            }
+          }
+        },
+        {
+          "name": "home",
+          "iteration": 2,
+          "lcpMs": 3200,
+          "fcpMs": 3068,
+          "cls": 0.02144514663195982,
+          "longTaskMs": 636,
+          "labInteractionMaxMs": 24,
+          "observedInteractions": 4,
+          "totals": {
+            "js": {
+              "raw": 1148504,
+              "gzip": 381535,
+              "brotli": 315366
+            },
+            "css": {
+              "raw": 364632,
+              "gzip": 48940,
+              "brotli": 37961
+            }
+          }
+        },
+        {
+          "name": "home",
+          "iteration": 3,
+          "lcpMs": 3256,
+          "fcpMs": 3112,
+          "cls": 0.02144514663195982,
+          "longTaskMs": 695,
+          "labInteractionMaxMs": 16,
+          "observedInteractions": 4,
+          "totals": {
+            "js": {
+              "raw": 1148504,
+              "gzip": 381535,
+              "brotli": 315366
+            },
+            "css": {
+              "raw": 364632,
+              "gzip": 48940,
+              "brotli": 37961
+            }
+          }
+        },
+        {
+          "name": "article",
+          "iteration": 1,
+          "lcpMs": 5764,
+          "fcpMs": 5376,
+          "cls": 0.7796947496947497,
+          "longTaskMs": 1208,
+          "labInteractionMaxMs": 24,
+          "observedInteractions": 3,
+          "totals": {
+            "js": {
+              "raw": 2599388,
+              "gzip": 805140,
+              "brotli": 656880
+            },
+            "css": {
+              "raw": 457955,
+              "gzip": 69202,
+              "brotli": 55501
+            }
+          }
+        },
+        {
+          "name": "article",
+          "iteration": 2,
+          "lcpMs": 5764,
+          "fcpMs": 5376,
+          "cls": 0.7796947496947497,
+          "longTaskMs": 1112,
+          "labInteractionMaxMs": 16,
+          "observedInteractions": 3,
+          "totals": {
+            "js": {
+              "raw": 2599388,
+              "gzip": 805140,
+              "brotli": 656880
+            },
+            "css": {
+              "raw": 457955,
+              "gzip": 69202,
+              "brotli": 55501
+            }
+          }
+        },
+        {
+          "name": "article",
+          "iteration": 3,
+          "lcpMs": 5760,
+          "fcpMs": 5360,
+          "cls": 0.7796947496947497,
+          "longTaskMs": 1218,
+          "labInteractionMaxMs": 24,
+          "observedInteractions": 4,
+          "totals": {
+            "js": {
+              "raw": 2599388,
+              "gzip": 805140,
+              "brotli": 656880
+            },
+            "css": {
+              "raw": 457955,
+              "gzip": 69202,
+              "brotli": 55501
+            }
+          }
+        },
+        {
+          "name": "editor",
+          "iteration": 1,
+          "lcpMs": 10004,
+          "fcpMs": 9168,
+          "cls": 0,
+          "longTaskMs": 2358,
+          "labInteractionMaxMs": 32,
+          "observedInteractions": 5,
+          "totals": {
+            "js": {
+              "raw": 4108532,
+              "gzip": 1317712,
+              "brotli": 1033469
+            },
+            "css": {
+              "raw": 544079,
+              "gzip": 84314,
+              "brotli": 68666
+            }
+          }
+        },
+        {
+          "name": "editor",
+          "iteration": 2,
+          "lcpMs": 9928,
+          "fcpMs": 9112,
+          "cls": 0,
+          "longTaskMs": 2310,
+          "labInteractionMaxMs": 24,
+          "observedInteractions": 7,
+          "totals": {
+            "js": {
+              "raw": 4108532,
+              "gzip": 1317712,
+              "brotli": 1033469
+            },
+            "css": {
+              "raw": 544079,
+              "gzip": 84314,
+              "brotli": 68666
+            }
+          }
+        },
+        {
+          "name": "editor",
+          "iteration": 3,
+          "lcpMs": 10032,
+          "fcpMs": 9192,
+          "cls": 0,
+          "longTaskMs": 2330,
+          "labInteractionMaxMs": 16,
+          "observedInteractions": 4,
+          "totals": {
+            "js": {
+              "raw": 4108532,
+              "gzip": 1317712,
+              "brotli": 1033469
+            },
+            "css": {
+              "raw": 544079,
+              "gzip": 84314,
+              "brotli": 68666
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

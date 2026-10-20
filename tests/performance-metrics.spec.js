@@ -27,6 +27,8 @@ describe('performance evidence', () => {
       expect(result[0].raw).toBe(1800)
       expect(result[0].gzip).toBeLessThan(result[0].raw)
       expect(result[0].brotli).toBeLessThan(result[0].raw)
+      await writeFile(join(dir, 'app.js'), 'changed')
+      expect((await assetSizes([{ path: '/app.js', sameOrigin: true }], dir))[0].raw).toBe(7)
       await expect(assetSizes([{ path: '/../escape.js', sameOrigin: true }], dir)).rejects.toThrow('outside dist')
     } finally { await rm(dir, { recursive: true, force: true }) }
   })

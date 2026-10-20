@@ -61,7 +61,15 @@ test('production home, article and editor: three cold samples', async ({ browser
         try {
           const page = await context.newPage()
           const errors = []
+          const requests = new Map()
           page.on('pageerror', error => errors.push(error.message))
+          page.on('request', request => {
+            const url = new URL(request.url())
+            requests.set(request, { path: url.pathname, sameOrigin: url.origin === origin,
+              type: request.resourceType(), state: 'pending' })
+          })
+          page.on('requestfinished', request => { requests.get(request).state = 'finished' })
+          page.on('requestfailed', request => { requests.get(request).state = 'failed' })
           const cdp = await context.newCDPSession(page)
           await cdp.send('Network.enable')
           await cdp.send('Network.setCacheDisabled', { cacheDisabled: true })
@@ -98,9 +106,11 @@ test('production home, article and editor: three cold samples', async ({ browser
           const largeResponse = raw.resources.find(resource => resource.encodedBodyBytes > 100000 && resource.transferBytes > 0)
           expect(largeResponse).toBeTruthy()
           expect(largeResponse.durationMs).toBeGreaterThan(largeResponse.encodedBodyBytes / 200000 * 1000 * 0.7)
+          const network = [...requests.values()].map(request => ({ ...request }))
           const assets = await assetSizes(raw.resources)
+          const requestedAssets = await assetSizes(network)
           const { events, ...metrics } = raw
-          const sample = { name, iteration, ...metrics, ...interactionSummary(events), assets,
+          const sample = { name, iteration, ...metrics, ...interactionSummary(events), assets, network, requestedAssets,
             totals: Object.fromEntries(['js', 'css'].map(kind => [kind,
               Object.fromEntries(['raw', 'gzip', 'brotli'].map(size =>
                 [size, assets.filter(asset => asset.kind === kind).reduce((sum, asset) => sum + asset[size], 0)]))])) }
