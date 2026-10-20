@@ -6,6 +6,8 @@
 
 ### Added
 
+- 文章路由复用后端匿名原始 HTML 的分享 metadata，切换路由清除旧信息并忽略过期响应；不执行或复制返回 HTML 中的脚本（Refs Zer0Drv/blog#58）。
+
 - 增加生产构建的首页、文章页和编辑页性能基线，固定节流条件及 Markdown 样例，记录九次冷缓存资源/绘制/交互样本并保留 CI 证据（Refs Zer0Drv/blog#58）。
 
 - 新增设置页两步验证与登录验证页，本地二维码、恢复码保存保护及 GitHub 挑战分支；新增经所有者确认的 qrcode 依赖（Refs Zer0Drv/blog#19）。

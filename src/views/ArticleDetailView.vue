@@ -133,6 +133,7 @@ import { resolveUploadUrl } from '../api/upload'
 import { sanitizeHtml } from '../utils/sanitize'
 import { useAuthStore } from '../stores/auth'
 import { useDocumentTitle } from '../composables/useDocumentTitle'
+import { loadArticleMetadata } from '../utils/articleMetadata'
 import CommentSection from '../components/CommentSection.vue'
 import MdContentPreview from '../components/MdContentPreview.vue'
 import CaptchaInput from '../components/CaptchaInput.vue'
@@ -328,6 +329,7 @@ async function toggleFollowAuthor() {
 }
 
 async function loadArticle() {
+  void loadArticleMetadata(route.params.slug || route.params.id)
   const sequence = ++loadSequence
   loading.value = true
   article.value = null
