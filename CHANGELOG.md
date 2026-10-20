@@ -6,6 +6,8 @@
 
 ### Added
 
+- 增加生产构建的首页、文章页和编辑页性能基线，固定节流条件及 Markdown 样例，记录九次冷缓存资源/绘制/交互样本并保留 CI 证据（Refs Zer0Drv/blog#58）。
+
 - 新增设置页两步验证与登录验证页，本地二维码、恢复码保存保护及 GitHub 挑战分支；新增经所有者确认的 qrcode 依赖（Refs Zer0Drv/blog#19）。
 
 - 新增经所有者批准的 Playwright 开发测试依赖及真实 Chromium E2E：隔离前后端/数据库/缓存/对象存储，覆盖创作、导入、上传、权限与断网保护；两仓 CI/CD 纳入必需浏览器检查并保留日志/截图/trace（Refs [blog#58](https://github.com/Zer0Drv/blog/issues/58)）。

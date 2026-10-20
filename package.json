@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:performance": "playwright test --config playwright.performance.config.js",
     "smoke:gateway": "node .github/scripts/gateway-smoke.mjs",
     "verify:deployment": "node .github/scripts/deployment-evidence.mjs"
   },

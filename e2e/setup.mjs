@@ -88,7 +88,9 @@ export default async function setup() {
     const health = await fetch('http://127.0.0.1:28082/actuator/health', { signal: AbortSignal.timeout(5000) })
     if (!health.ok || (await health.json()).status !== 'UP') throw new Error('Isolated backend is not healthy')
     await writeFile(join(output, 'fixture.json'), JSON.stringify(fixture, null, 2))
-    const vite = start(process.execPath, [join(root, 'node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', '25173'], root,
+    const preview = process.env.PERFORMANCE_PREVIEW === '1'
+    if (preview) await stat(join(root, 'dist/index.html'))
+    const vite = start(process.execPath, [join(root, 'node_modules/vite/bin/vite.js'), ...(preview ? ['preview'] : []), '--host', '127.0.0.1', '--port', '25173'], root,
       { ...process.env, VITE_PORT: '25173', API_TARGET: 'http://127.0.0.1:28082' }, 'frontend')
     let ready = false
     for (let i = 0; i < 150; i++) {
@@ -101,7 +103,7 @@ export default async function setup() {
     const revision = async directory => (await execute('git', ['rev-parse', 'HEAD'], { cwd: directory })).stdout.trim()
     const dirty = async directory => (await execute('git', ['status', '--porcelain'], { cwd: directory })).stdout.trim().length > 0
     await writeFile(join(output, 'versions.json'), JSON.stringify({ runId: run, project,
-      frontendSha: await revision(root), backendSha: await revision(backend),
+      frontendSha: await revision(root), backendSha: await revision(backend), frontendMode: preview ? 'production-preview' : 'development',
       sourceDirty: { frontend: await dirty(root), backend: await dirty(backend) },
       backendPort: 28082, frontendPort: 25173, mysqlPort: 23307, redisPort: 26379, minioPort: 29000,
       note: 'Dedicated tmpfs services; test-only seeded accounts; no production ports, volumes or credentials' }, null, 2))

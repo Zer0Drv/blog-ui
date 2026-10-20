@@ -201,6 +201,7 @@ src/
   Node 20 已 EOL），`pnpm install --frozen-lockfile` 严格模式（lockfile 未同步直接失败），
   随后依次 `pnpm test`、`pnpm build`。
 - 真实浏览器：[Playwright E2E](docs/browser-e2e.md) 运行真实前后端及隔离 MySQL/Redis/MinIO，覆盖登录、编辑/自动保存/刷新恢复、导入路由、附件、权限和断网保护；两仓完整 CI/CD 均等待该必需 job，失败日志/截图/trace 保留 7 天。
+- 性能测量：[生产页面基线](docs/performance-baseline.md) 固定网络/CPU/样例文章，记录首页、文章页、编辑页各三次冷缓存的 JS/CSS 压缩估算、请求、LCP/CLS 与实验室交互延迟；CI 原始报告保留 90 天，不冒充真实用户 INP。
 - CD（`.github/workflows/cd.yml`）：push main 触发（按 `src/`、`package.json` 等路径过滤，
   提交信息带 `[skip cd]` 可跳过）：复用同一 SHA 的完整 CI/test/build → production 审批 → 自托管 runner 校验产物提交及文件校验和后同步到部署机
   MinIO `blog-frontend` 桶（Nginx 网关边缘缓存直出，`index.html` no-cache 即时生效）。
