@@ -11,6 +11,7 @@ import { autosaveArticle, createArticle, getArticle, getAutosave, importArticle,
 import { DRAFT_NEW_KEY } from '../../utils/articleEdit'
 
 // 路由、布局、编辑页与自动保存均使用真实实现，只替换网络与重型编辑器。
+vi.mock('../../lib/mdEditorConfig', () => ({}))
 vi.mock('md-editor-v3', () => ({ MdEditor: {
   props: ['modelValue', 'editorId'], emits: ['update:modelValue'],
   template: '<textarea data-editor="md" :data-id="editorId" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />'

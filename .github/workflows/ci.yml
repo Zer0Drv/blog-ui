@@ -122,3 +122,51 @@ jobs:
           path: e2e-artifacts/
           retention-days: 7
           if-no-files-found: warn
+
+  performance-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BACKEND_E2E_DIR: ${{ github.workspace }}/backend-e2e
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/checkout@v7
+        with:
+          repository: Zer0Drv/blog
+          ref: ba612d7298d9797ee2e5f2353009ee5097139dd5
+          path: backend-e2e
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Compile isolated backend
+        working-directory: backend-e2e
+        run: mvn -B -DskipTests package
+      - name: Build production frontend
+        run: pnpm run build
+      - name: Measure fixed cold-page scenarios
+        run: pnpm test:performance
+      - name: Clean this run's test infrastructure
+        if: always()
+        run: node e2e/cleanup.mjs
+      - name: Save performance evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: performance-${{ github.sha }}-${{ github.run_attempt }}
+          path: e2e-artifacts/
+          retention-days: 90
+          if-no-files-found: error

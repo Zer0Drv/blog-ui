@@ -18,6 +18,7 @@ vi.mock('vue-router', () => ({
 }))
 
 // 重型编辑器组件与样式在 jsdom 无意义，全部 stub
+vi.mock('../../lib/mdEditorConfig', () => ({}))
 vi.mock('md-editor-v3', () => ({ MdEditor: { template: '<div />' } }))
 vi.mock('../../components/RichEditor.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../../components/AttachmentPicker.vue', () => ({ default: { template: '<div />' } }))

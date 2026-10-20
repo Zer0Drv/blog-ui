@@ -6,11 +6,17 @@
 
 ### Added
 
+- 增加生产构建的首页、文章页和编辑页性能基线，固定节流条件及 Markdown 样例，记录九次冷缓存资源/绘制/交互样本并保留 CI 证据（Refs Zer0Drv/blog#58）。
+
 - 新增设置页两步验证与登录验证页，本地二维码、恢复码保存保护及 GitHub 挑战分支；新增经所有者确认的 qrcode 依赖（Refs Zer0Drv/blog#19）。
 
 - 新增经所有者批准的 Playwright 开发测试依赖及真实 Chromium E2E：隔离前后端/数据库/缓存/对象存储，覆盖创作、导入、上传、权限与断网保护；两仓 CI/CD 纳入必需浏览器检查并保留日志/截图/trace（Refs [blog#58](https://github.com/Zer0Drv/blog/issues/58)）。
 - 发布冒烟报告增加后端镜像 revision/image ID、运行状态和 MySQL Flyway 版本/校验和；前后两次身份采样拒绝部署中途变化，补充真实网关与人工浏览器验证基线（Refs [blog#58](https://github.com/Zer0Drv/blog/issues/58)）。
 - 正常前端发布后执行网关只读业务冒烟，核对首页入口资源、完整发布 SHA、公开 API 与文章路由，保存成功/失败报告；新增真实 HTTP 故障回归（Refs [blog#58](https://github.com/Zer0Drv/blog/issues/58)）。
+
+### Changed
+
+- Markdown 高亮、KaTeX、Mermaid 配置随预览/编辑入口加载，首页不再提前加载这些扩展；保留本地实例、渲染能力与 DOMPurify 消毒（Refs Zer0Drv/blog#58）。
 
 ## [1.1.0] - 2026-10-16
 
