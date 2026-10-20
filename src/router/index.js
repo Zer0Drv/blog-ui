@@ -3,6 +3,7 @@ import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
 import { ROLES, ROLE_GROUPS } from '../constants/roles'
 import { syncRouteTitle } from '../composables/useDocumentTitle'
+import { resetArticleMetadata } from '../utils/articleMetadata'
 
 // meta.title 供页签标题（afterEach 组合为 `<title> - <站点名>`）；
 // 管理后台页自带「- 管理后台」层级，如 站点设置 - 管理后台 - <站点名>
@@ -94,5 +95,6 @@ router.beforeEach(async to => {
 
 // 页签标题：导航确认后套用 to.meta.title（动态页的覆盖随之失效，回到路由标题）
 router.afterEach(syncRouteTitle)
+router.afterEach((_to, _from, failure) => { if (!failure) resetArticleMetadata() })
 
 export default router
