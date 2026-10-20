@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "frontendSha": "42185de65f161a484188818cca2e1079e0d72a73",
+      "backendSha": "028652b908c6dc29a9dc51b06759ff1905267c2a",
+      "schema": "17",
+      "schemaChecksum": 1723020122,
+      "evidence": "https://github.com/Zer0Drv/blog/blob/b33a5e4bf8e961481e12c20d98263e13d2d07587/docs/compatibility-2026-10-20.md",
+      "scope": "Exact clean checkouts; isolated real MySQL/Redis/MinIO; Chromium 6/6 including TOTP. No production rollback performed."
+    },
+    {
+      "frontendSha": "42185de65f161a484188818cca2e1079e0d72a73",
+      "backendSha": "edaac9bf49d547f8bd38e9b781df5ff2b81921f3",
+      "schema": "17",
+      "schemaChecksum": 1723020122,
+      "evidence": "https://github.com/Zer0Drv/blog-ui/actions/runs/39361834457",
+      "testedBackendSha": "ba612d7298d9797ee2e5f2353009ee5097139dd5",
+      "equivalentBackendTree": "4fad13d43ef0d57e70e0c0741a824426c7c39e2a",
+      "scope": "Browser E2E tested this frontend with the identical backend tree on disposable V17. The old production gateway smoke was V16 and is not this pair's evidence."
+    },
+    {
+      "frontendSha": "0c7d424abcfb2c67ddcb9850fdad9d7046ff5e16",
+      "backendSha": "edaac9bf49d547f8bd38e9b781df5ff2b81921f3",
+      "schema": "17",
+      "schemaChecksum": 1723020122,
+      "evidence": "https://github.com/Zer0Drv/blog-ui/actions/runs/39386965775"
+    }
+  ]
+}

@@ -6,6 +6,8 @@
 
 ### Added
 
+- 历史回滚先认证原始 Actions 产物、完整 CI 与前后端/schema 兼容组合；正常发布及回滚统一网关冒烟，和后端/备份共享现场互斥锁（Refs Zer0Drv/blog#58）。
+
 - 文章路由复用后端匿名原始 HTML 的分享 metadata，切换路由清除旧信息并忽略过期响应；不执行或复制返回 HTML 中的脚本（Refs Zer0Drv/blog#58）。
 
 - 增加生产构建的首页、文章页和编辑页性能基线，固定节流条件及 Markdown 样例，记录九次冷缓存资源/绘制/交互样本并保留 CI 证据（Refs Zer0Drv/blog#58）。

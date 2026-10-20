@@ -124,7 +124,7 @@ describe('gateway business smoke over actual HTTP', () => {
   })
 })
 
-it('runs smoke after verified publishing on normal CD and retains failure evidence', async () => {
+it('runs smoke after both verified publishing and certified rollback and retains failure evidence', async () => {
   const workflow = await readFile(new URL('../.github/workflows/cd.yml', import.meta.url), 'utf8')
   const publish = workflow.indexOf('- name: 校验并发布已通过 CI 的产物')
   const smoke = workflow.indexOf('- name: 实际网关业务冒烟')
@@ -133,9 +133,16 @@ it('runs smoke after verified publishing on normal CD and retains failure eviden
   expect(smoke).toBeGreaterThan(publish)
   expect(evidence).toBeGreaterThan(smoke)
   const step = workflow.slice(smoke, evidence)
-  expect(step).toContain("if: needs.gate.outputs.rollback == 'false'")
+  expect(step).not.toContain('if:')
+  expect(step).toContain('steps.rollback.outputs.sha || github.sha')
+  const rollback = workflow.indexOf('- name: 下载并认证历史归档')
+  expect(rollback).toBeGreaterThan(publish)
+  expect(smoke).toBeGreaterThan(rollback)
+  const restore = workflow.slice(rollback, smoke)
+  expect(restore.indexOf('certify-rollback.mjs')).toBeLessThan(restore.indexOf('mc mirror'))
+  expect(restore).not.toContain('mc rm')
   expect(step).toContain('"$GATEWAY_URL" "$RELEASE_SHA"')
   expect(step).toContain('/.github/scripts/deployment-evidence.mjs')
   expect(step).not.toContain('continue-on-error')
-  expect(workflow.slice(evidence)).toContain("if: always() && needs.gate.outputs.rollback == 'false'")
+  expect(workflow.slice(evidence)).toContain('if: always()')
 })
