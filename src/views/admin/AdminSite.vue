@@ -41,7 +41,7 @@
         </el-form-item>
         <el-form-item label="友情链接">
           <el-switch v-model="friendLinksEnabled" />
-          <span class="form-tip inline">开启后公众端页脚与友链页展示已启用的友情链接</span>
+          <span class="form-tip inline">点击保存后生效；开启后公众端页脚与友链页展示已启用的友情链接</span>
         </el-form-item>
         <el-form-item label="页面导航">
           <div class="page-navigation">
@@ -67,6 +67,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getAdminSiteConfig, saveAdminSiteConfig } from '../../api/admin'
 import { listAdminPages, notifyPageNavigationChanged } from '../../api/page'
+import { publishSiteConfig } from '../../composables/useSiteConfig'
 
 // P0 站点设置：八键表单，打开时 GET /admin/site/config 填表，保存 PUT 全量 map
 const KEYS = [
@@ -134,6 +135,7 @@ async function onSave() {
     for (const key of KEYS) {
       form[key] = data?.[key] ?? values[key]
     }
+    publishSiteConfig(Object.fromEntries(['site.name', 'site.description', 'site.icp', 'site.friend_links_enabled'].map(k => [k, form[k]])))
     ElMessage.success('站点设置已保存')
     notifyPageNavigationChanged()
   } catch { /* 拦截器已提示 */ } finally {

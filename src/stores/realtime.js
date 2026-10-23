@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
+import { refreshSession } from '../api/http'
 
 // WebSocket 实时通道：私信（private_message）+ 通知（notification）推送
 // 断线指数退避重连（1s→2s→4s→8s→16s，上限 5 次）；WS 不可用时各页面轮询兜底
@@ -13,6 +14,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
   let reconnectAttempts = 0
   let reconnectTimer = null
   let manualClose = false
+  let needsRefresh = false
   const listeners = new Map() // type -> Set<cb>
 
   function on(type, cb) {
@@ -56,7 +58,8 @@ export const useRealtimeStore = defineStore('realtime', () => {
       if (msg && msg.type) dispatch(msg.type, msg.data)
     }
     socket.onerror = () => { /* 错误后必有 onclose，统一在 onclose 里处理重连 */ }
-    socket.onclose = () => {
+    socket.onclose = event => {
+      needsRefresh = event?.code === 1008 || event?.code === 1006
       connected.value = false
       if (ws === socket) ws = null
       if (manualClose) return // 主动断开不重连
@@ -68,8 +71,13 @@ export const useRealtimeStore = defineStore('realtime', () => {
     if (reconnectAttempts >= MAX_RECONNECT || reconnectTimer) return
     const delay = 1000 * 2 ** reconnectAttempts // 1s→2s→4s→8s→16s
     reconnectAttempts += 1
-    reconnectTimer = setTimeout(() => {
+    reconnectTimer = setTimeout(async () => {
       reconnectTimer = null
+      if (needsRefresh) {
+        try { await refreshSession() } catch { /* polling will handle expired sessions */ }
+        needsRefresh = false
+      }
+      if (manualClose) return
       connect()
     }, delay)
   }

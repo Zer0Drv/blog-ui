@@ -19,7 +19,12 @@
         <thead><tr><th>对象</th><th>大小</th><th>状态</th><th>观察期结束</th><th>操作</th></tr></thead>
         <tbody>
           <tr v-for="row in rows" :key="row.id" :data-testid="`object-${row.id}`">
-            <td><span>{{ row.storage }}</span><br><code>{{ row.objectKey }}</code></td>
+            <td><span>{{ row.storage }}</span><br><code>{{ row.objectKey }}</code>
+              <ObjectPreview v-if="['OBSERVING', 'RETAINED', 'RESTORED'].includes(row.state)"
+                :src="`/api/admin/attachments/cleanup/${row.id}/preview`"
+                :original="`/api/admin/attachments/cleanup/${row.id}/preview?download=true`" download />
+              <span v-else>不可预览</span>
+            </td>
             <td>{{ bytes(row.sizeBytes) }}</td>
             <td>{{ label(row.state) }}<p v-if="row.lastError" class="error">{{ row.lastError }}</p></td>
             <td>{{ date(row.eligibleAt) }}</td>
@@ -42,6 +47,7 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
+import ObjectPreview from '../../components/ObjectPreview.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pageAttachmentCleanup, getAttachmentCleanupReport, scanAttachmentObjects, restoreAttachmentObject, purgeAttachmentObject } from '../../api/attachmentCleanup'
 

@@ -44,6 +44,9 @@
 
       <el-table v-loading="loading" :data="rows" stripe>
         <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column label="头像" width="100">
+          <template #default="{ row }"><ObjectPreview :src="row.avatar" label="用户头像" /></template>
+        </el-table-column>
         <el-table-column prop="username" label="用户名" min-width="120" show-overflow-tooltip />
         <el-table-column prop="nickname" label="昵称" min-width="120" show-overflow-tooltip>
           <template #default="{ row }">{{ row.nickname || '-' }}</template>
@@ -68,7 +71,8 @@
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <template v-if="row.role !== 'ADMIN'">
+            <OwnerUserOperations :user="row" @changed="load" />
+            <template v-if="!['ADMIN', 'SUPER_ADMIN'].includes(row.role)">
               <el-button
                 v-if="Number(row.status) !== 1"
                 size="small"
@@ -122,6 +126,8 @@
 </template>
 
 <script setup>
+import ObjectPreview from '../../components/ObjectPreview.vue'
+import OwnerUserOperations from '../../components/OwnerUserOperations.vue'
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { banUser, pageAdminUsers, unbanUser, updateUserRole } from '../../api/admin'
@@ -209,7 +215,7 @@ async function onChangeRole(row, val) {
 }
 
 function roleText(r) {
-  return { USER: '用户', AUTHOR: '作者', ADMIN: '管理员' }[r] || r
+  return { USER: '用户', AUTHOR: '作者', ADMIN: '管理员', SUPER_ADMIN: '超级管理员' }[r] || r
 }
 
 function roleType(r) {

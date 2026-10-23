@@ -13,6 +13,19 @@ const http = axios.create({
 
 // 401 出口（#22）：http 层不 import store/router（防循环依赖），由装配层（main.js）反向注册回调
 let unauthorizedHandler = null
+let refreshPromise = null
+export function refreshSession() {
+  if (!refreshPromise) {
+    const execute = () => axios.post('/api/auth/refresh', null, {
+      withCredentials: true, timeout: 15000, headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    // Serialize rotations across tabs when Web Locks is supported.
+    refreshPromise = (globalThis.navigator?.locks?.request
+      ? navigator.locks.request('blog-session-refresh', execute) : execute())
+      .finally(() => { refreshPromise = null })
+  }
+  return refreshPromise
+}
 export function setUnauthorizedHandler(fn) {
   unauthorizedHandler = fn
 }
@@ -37,7 +50,7 @@ http.interceptors.response.use(
     if (body && typeof body === 'object' && 'code' in body) {
       // rawResponse：调用方需要完整 R 体（如读取 message 做敏感词审核提示）时跳过 data 剥离
       if (body.code === '200') return resp.config?.rawResponse ? body : body.data
-      ElMessage.error(body.message || '请求失败')
+      if (!resp.config?.silent) ElMessage.error(body.message || '请求失败')
       // 业务错误：后端 code 挂到 Error 上（如 CAPTCHA_REQUIRED 供页面判断）
       const e = new Error(body.message || '请求失败')
       e.code = body.code
@@ -46,6 +59,15 @@ http.interceptors.response.use(
     return body
   },
   async err => {
+    const config = err.config
+    if (err.response?.status === 401 && config && !config._refreshed &&
+        !/\/auth\/(login|register|refresh|totp\/login|oauth\/exchange)$/.test(config.url || '')) {
+      config._refreshed = true
+      try {
+        await refreshSession()
+        return http.request(config)
+      } catch { /* standard session-expired handling below */ }
+    }
     // 文件流（blob）错误体：后端统一错误也是 JSON，转出来读业务码/消息
     if (err.response?.data instanceof Blob) {
       try {
@@ -58,7 +80,7 @@ http.interceptors.response.use(
       const isSessionProbe = /\/auth\/me$/.test(err.config?.url || '')
       if (!isSessionProbe && location.pathname !== '/login') unauthorizedHandler?.()
     }
-    if (err.response?.status !== 401 || !/\/auth\/me$/.test(err.config?.url || '')) {
+    if (!err.config?.silent && (err.response?.status !== 401 || !/\/auth\/me$/.test(err.config?.url || ''))) {
       ElMessage.error(err.response?.data?.message || err.message || '网络错误')
     }
     // HTTP 层错误：同样透传后端 code（限流/参数错误等也走 HTTP 状态码时可用）

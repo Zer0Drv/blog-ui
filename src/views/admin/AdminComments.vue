@@ -63,6 +63,7 @@
         </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
+            <el-button size="small" link @click="showNotifications(row)">关联通知</el-button>
             <!-- 待审核：通过 / 拒绝 -->
             <template v-if="row.status === 'PENDING'">
               <el-button size="small" link type="success" @click="onApprove(row)">通过</el-button>
@@ -110,10 +111,19 @@
         />
       </div>
     </el-card>
+    <el-dialog v-model="notificationsOpen" title="关联通知（最近 100 条）" width="600px">
+      <p>删除评论保留提醒历史；撤回会移除指定通知。已发送的站外邮件无法收回。</p>
+      <div v-for="item in notifications" :key="item.id">
+        <span>#{{ item.id }} · {{ item.summary }} · {{ formatTime(item.createTime) }}</span>
+        <el-button type="danger" link @click="retract(item)">撤回此通知</el-button>
+      </div>
+      <el-empty v-if="!notifications.length" description="暂无关联通知" />
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
+import { adminCommentNotifications, retractNotification } from '../../api/notification'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -241,6 +251,21 @@ function formatTime(t) {
 }
 
 onMounted(load)
+const notificationsOpen = ref(false), notifications = ref([])
+async function showNotifications(row) {
+  try {
+    notifications.value = await adminCommentNotifications(row.id)
+    notificationsOpen.value = true
+  } catch { /* API displays failure */ }
+}
+async function retract(item) {
+  try {
+    await ElMessageBox.confirm('撤回后接收者将无法在通知中心查看此提醒，确认撤回？', '撤回通知', { type: 'warning' })
+    await retractNotification(item.id)
+    notifications.value = notifications.value.filter(n => n.id !== item.id)
+    ElMessage.success('通知已撤回')
+  } catch { /* cancellation or API failure */ }
+}
 </script>
 
 <style scoped>

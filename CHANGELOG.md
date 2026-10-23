@@ -6,6 +6,10 @@
 
 ### Added
 
+- 增加超级管理员处置、独立所有权转移及本机重启状态/生效值核验界面（Refs Zer0Drv/blog#82、Zer0Drv/blog#83）。
+- 增加 Cookie 会话自动轮换与失败退出、评论通知撤回及不可用占位（Refs Zer0Drv/blog#26、Zer0Drv/blog#81）。
+- 增加头像与清理对象预览/下载，修复友情链接配置跨页面和标签页失效（Refs #77、#78）。
+
 - 历史回滚先认证原始 Actions 产物、完整 CI 与前后端/schema 兼容组合；正常发布及回滚统一网关冒烟，和后端/备份共享现场互斥锁（Refs Zer0Drv/blog#58）。
 
 - 文章路由复用后端匿名原始 HTML 的分享 metadata，切换路由清除旧信息并忽略过期响应；不执行或复制返回 HTML 中的脚本（Refs Zer0Drv/blog#58）。

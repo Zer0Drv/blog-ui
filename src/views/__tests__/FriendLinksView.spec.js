@@ -3,6 +3,9 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import FriendLinksView from '../FriendLinksView.vue'
+import { getSiteConfig } from '../../api/site'
+import { publishSiteConfig } from '../../composables/useSiteConfig'
+vi.mock('../../api/site', () => ({ getSiteConfig: vi.fn() }))
 import { getFriendLinks } from '../../api/friendlink'
 
 vi.mock('../../api/friendlink', () => ({
@@ -34,6 +37,8 @@ function mountView() {
 describe('FriendLinksView 公开友链页（issue #17）', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    getSiteConfig.mockResolvedValue({ 'site.friend_links_enabled': 'true' })
+    publishSiteConfig({ 'site.friend_links_enabled': 'true' })
     document.body.innerHTML = ''
   })
 
@@ -50,6 +55,23 @@ describe('FriendLinksView 公开友链页（issue #17）', () => {
     expect(wrapper.text()).toContain('描述2')
     // 无 logo 时渲染首字符占位
     expect(cards[0].find('.link-logo.placeholder').text()).toBe('站')
+    wrapper.unmount()
+  })
+
+  it('关闭时直接访问不请求列表，重新开启后加载', async () => {
+    getSiteConfig.mockResolvedValue({ 'site.friend_links_enabled': 'false' })
+    getFriendLinks.mockResolvedValue([link(1)])
+    const wrapper = mountView()
+    await flushPromises()
+    expect(getFriendLinks).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('本站暂未开放友情链接')
+    getSiteConfig.mockResolvedValue({ 'site.friend_links_enabled': 'true' })
+    publishSiteConfig({ 'site.friend_links_enabled': 'true' })
+    await flushPromises()
+    expect(wrapper.findAll('.link-card')).toHaveLength(1)
+    publishSiteConfig({ 'site.friend_links_enabled': 'false' })
+    await flushPromises()
+    expect(wrapper.findAll('.link-card')).toHaveLength(0)
     wrapper.unmount()
   })
 

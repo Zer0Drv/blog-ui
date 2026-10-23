@@ -24,11 +24,11 @@ export const useAuthStore = defineStore('auth', {
   }),
   getters: {
     isLoggedIn: s => !!s.user,
-    isAdmin: s => s.user?.role === ROLES.ADMIN,
+    isAdmin: s => [ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(s.user?.role),
     // 写作者组（ADMIN/AUTHOR）：写文章、我的文章等入口共用
     canWrite: s => ROLE_GROUPS.WRITERS.includes(s.user?.role),
     hasRole: s => role => s.user?.role === role,
-    hasAnyRole: s => (...roles) => roles.includes(s.user?.role)
+    hasAnyRole: s => (...roles) => roles.includes(s.user?.role) || (s.user?.role === ROLES.SUPER_ADMIN && roles.includes(ROLES.ADMIN))
   },
   actions: {
     // 私有接缝：唯一会话迁移点。null→user 触发 realtime.connect()，

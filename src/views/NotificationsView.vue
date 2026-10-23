@@ -64,10 +64,12 @@ import { ElMessage } from 'element-plus'
 import { pageNotifications, markRead, markAllRead } from '../api/notification'
 import { resolveUploadUrl } from '../api/upload'
 import { useRealtimeTopic } from '../composables/useRealtimeTopic'
+import { useRealtimeStore } from '../stores/realtime'
 import { onProfileUpdated } from '../utils/profileSync'
 import { notifyUnreadChanged } from '../utils/unreadSync'
 
 const router = useRouter()
+const realtime = useRealtimeStore()
 
 const typeTabs = [
   { label: '全部', value: '' },
@@ -105,14 +107,17 @@ function formatTime(t) {
   return t ? String(t).replace('T', ' ').slice(0, 16) : ''
 }
 
+let loadGeneration = 0
 async function load() {
+  const generation = ++loadGeneration
   loading.value = true
   try {
     const data = await pageNotifications(activeType.value, page.value, size)
+    if (generation !== loadGeneration) return
     items.value = data.records || []
     total.value = Number(data.total) || 0
   } catch { /* 拦截器已提示 */ } finally {
-    loading.value = false
+    if (generation === loadGeneration) loading.value = false
   }
 }
 
@@ -132,13 +137,15 @@ async function onClick(n) {
   }
   if (n.type === 'ARTICLE_FORCE_DELETED') {
     // 文章已被管理员删除：只标记已读，详情已不存在，不跳转
+  } else if (n.contentState && n.contentState !== 'AVAILABLE') {
+    ElMessage.info(n.summary || '相关内容暂不可访问')
   } else if (n.type === 'PRIVATE_MESSAGE') {
     router.push('/messages')
   } else if (n.type === 'FOLLOW' && n.actor?.id) {
     // 关注通知跳关注者主页
     router.push(`/users/${n.actor.id}`)
   } else if (n.articleId) {
-    router.push(`/article/${n.articleId}`)
+    router.push(`/article/${n.articleId}${n.commentId ? `#comment-${n.commentId}` : ''}`)
   }
 }
 
@@ -154,15 +161,10 @@ async function onMarkAllRead() {
   }
 }
 
-// WS 推送的新通知：命中当前 tab（全部/对应类型）且在第 1 页时插入列表顶部；
-// 总数即时 +1（未读项带红点样式）；其余情况等下次 load/切页自然带出
+// Always reload from the authoritative API; late frames must not resurrect withdrawn content.
 function onRealtimeNotification(n) {
   if (!n) return
-  total.value += 1
-  if (page.value === 1 && (!activeType.value || n.type === activeType.value)) {
-    items.value.unshift(n)
-    if (items.value.length > size) items.value.pop()
-  }
+  void load()
 }
 
 // WS 订阅 + 断线 5s 轮询兜底（与私信页对齐：WS 断开才轮询、连上即停，内收于惯用法）
@@ -170,13 +172,16 @@ useRealtimeTopic('notification', onRealtimeNotification, { poll: load, interval:
 
 // 资料变更（头像/昵称等）时重新拉取通知列表，actor 头像即时刷新
 const offProfileUpdated = onProfileUpdated(load)
+let refreshTimer
 
 onMounted(() => {
   load()
+  refreshTimer = setInterval(() => { if (realtime.connected) void load(); notifyUnreadChanged() }, 15000)
 })
 
 onUnmounted(() => {
   offProfileUpdated()
+  clearInterval(refreshTimer)
 })
 </script>
 

@@ -2,10 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // 捕获 http.js 注册的拦截器回调，直接驱动以断言错误码透传
 const handlers = {}
+const refreshMocks = vi.hoisted(() => ({ post: vi.fn(), request: vi.fn() }))
 
 vi.mock('axios', () => ({
   default: {
+    post: refreshMocks.post,
     create: () => ({
+      request: refreshMocks.request,
       interceptors: {
         request: { use: fn => { handlers.request = fn } },
         response: { use: (ok, bad) => { handlers.ok = ok; handlers.bad = bad } }
@@ -26,6 +29,30 @@ const { setUnauthorizedHandler } = httpModule
 describe('http 拦截器', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    refreshMocks.post.mockRejectedValue(new Error('No refresh session'))
+    setUnauthorizedHandler(null)
+  })
+
+  it('并发 401 只轮换一次并分别重试原请求', async () => {
+    let finish
+    refreshMocks.post.mockReturnValue(new Promise(resolve => { finish = resolve }))
+    refreshMocks.request.mockResolvedValue({ ok: true })
+    const first = { response: { status: 401 }, config: { url: '/users/me' } }
+    const second = { response: { status: 401 }, config: { url: '/notifications' } }
+    const results = Promise.all([handlers.bad(first), handlers.bad(second)])
+    expect(refreshMocks.post).toHaveBeenCalledTimes(1)
+    finish({ data: { refreshed: true } })
+    expect(await results).toEqual([{ ok: true }, { ok: true }])
+    expect(refreshMocks.request).toHaveBeenCalledTimes(2)
+    expect(first.config._refreshed).toBe(true)
+  })
+
+  it('重试仍为 401 时不再刷新，登录失败也不刷新', async () => {
+    const again = { response: { status: 401 }, config: { url: '/users/me', _refreshed: true } }
+    await expect(handlers.bad(again)).rejects.toBe(again)
+    const login = { response: { status: 401 }, config: { url: '/auth/login' } }
+    await expect(handlers.bad(login)).rejects.toBe(login)
+    expect(refreshMocks.post).not.toHaveBeenCalled()
   })
 
   it('导出 axios 实例', () => {

@@ -27,6 +27,7 @@
           </el-form-item>
         </section>
       </el-form>
+      <ApplicationRestart :dirty="dirtyKeys.length > 0 || saving" :rows="rows" @recovered="load" />
     </el-card>
     <el-card class="audit" v-loading="auditLoading">
       <template #header><div class="toolbar"><strong>变更记录</strong><el-button @click="loadAudit">刷新</el-button></div></template>
@@ -44,6 +45,7 @@
 </template>
 
 <script setup>
+import ApplicationRestart from '../../components/ApplicationRestart.vue'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
