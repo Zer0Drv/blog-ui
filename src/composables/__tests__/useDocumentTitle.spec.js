@@ -66,7 +66,7 @@ describe('useDocumentTitle / syncRouteTitle', () => {
     expect(document.title).toBe('归档 - Blog')
   })
 
-  it('sessionStorage 有缓存时不再请求接口', async () => {
+  it('sessionStorage 有缓存时仍重新校验服务器', async () => {
     sessionStorage.setItem('site:config', JSON.stringify({ 'site.name': '缓存小站' }))
     const { syncRouteTitle, ensureSiteConfig, getSiteConfig } = await load()
 
@@ -74,8 +74,8 @@ describe('useDocumentTitle / syncRouteTitle', () => {
     syncRouteTitle({ meta: { title: '首页' } })
     await nextTick()
 
-    expect(getSiteConfig).not.toHaveBeenCalled()
-    expect(document.title).toBe('首页 - 缓存小站')
+    expect(getSiteConfig).toHaveBeenCalled()
+    expect(document.title).toBe('首页 - Blog')
   })
 })
 

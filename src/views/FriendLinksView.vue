@@ -1,9 +1,9 @@
 <template>
   <div class="friend-links-page">
     <h1 class="page-title">友情链接</h1>
-    <p class="page-sub">感谢以下站点与本站互相链接</p>
+    <p class="page-sub">{{ siteConfigReady && !friendLinksEnabled ? '本站暂未开放友情链接' : '感谢以下站点与本站互相链接' }}</p>
 
-    <div v-loading="loading" class="link-grid">
+    <div v-if="siteConfigReady && friendLinksEnabled" v-loading="loading" class="link-grid">
       <a
         v-for="link in links"
         :key="link.id"
@@ -25,23 +25,34 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { getFriendLinks } from '../api/friendlink'
+import { ensureSiteConfig, useSiteConfig } from '../composables/useSiteConfig'
+const { friendLinksEnabled, siteConfigReady } = useSiteConfig()
+let generation = 0
 
 // P1 友情链接公开页（issue #17）：仅展示启用状态，排序由后端保证（sort 升序）
 const links = ref([])
 const loading = ref(false)
 
 async function load() {
+  const version = ++generation
   loading.value = true
+  links.value = []
   try {
-    links.value = (await getFriendLinks()) || []
+    if (!await ensureSiteConfig(true) || !friendLinksEnabled.value) return
+    const result = (await getFriendLinks()) || []
+    if (version === generation && friendLinksEnabled.value) links.value = result
   } catch { /* 拦截器已提示 */ } finally {
-    loading.value = false
+    if (version === generation) loading.value = false
   }
 }
 
 onMounted(load)
+watch(friendLinksEnabled, enabled => {
+  if (enabled) void load()
+  else { generation++; links.value = []; loading.value = false }
+})
 </script>
 
 <style scoped>
