@@ -102,7 +102,7 @@ export function validatePublishTime(time, now = Date.now(), leadMs = PUBLISH_LEA
 
 // 编辑权限预检：ADMIN 或本人文章（后端保存时也会拒绝，这里提前拦截避免加载完整内容）
 export function canEditArticle(user, article) {
-  return user?.role === 'ADMIN' || String(article?.author?.id) === String(user?.id)
+  return ['ADMIN', 'SUPER_ADMIN'].includes(user?.role) || String(article?.author?.id) === String(user?.id)
 }
 
 // 草稿（服务端 autosave / localStorage）→ 表单补丁：只含草稿里存在的字段；

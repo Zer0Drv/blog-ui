@@ -15,7 +15,7 @@ const row = (key, type, value, group, extra = {}) => ({ key, type, value, active
 const field = key => wrapper.find(`[data-key="${key}"]`)
 const button = text => wrapper.findAll('button').find(b => b.text().trim() === text)
 async function open() {
-  wrapper = mount(AdminSysConfig, { global: { plugins: [ElementPlus] }, attachTo: document.body })
+  wrapper = mount(AdminSysConfig, { global: { plugins: [ElementPlus], stubs: { ApplicationRestart: true } }, attachTo: document.body })
   await flushPromises()
 }
 async function changeNumber(value = 7) {
