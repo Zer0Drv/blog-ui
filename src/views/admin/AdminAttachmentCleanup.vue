@@ -3,6 +3,7 @@
     <h2>附件清理</h2>
     <p>先从附件库移除文件，再扫描孤儿对象。上传满 1 天且无引用的对象会进入 7 天观察期，观察期间链接保持可用。</p>
     <p>文章、版本历史、自动保存草稿、回收站等内容中的图片会保留。恢复后对象保留在库中；物理删除后无法恢复。</p>
+    <p>仅支持系统管理的 JPG、PNG、GIF、WebP 图片；HTML、SVG、PDF、压缩包等其他文件不提供预览或下载。</p>
     <div class="toolbar">
       <el-button data-testid="scan" type="primary" :disabled="busy || loading" @click="scan">扫描孤儿对象</el-button>
       <el-button data-testid="refresh" :disabled="busy || loading" @click="load">刷新</el-button>
@@ -20,10 +21,11 @@
         <tbody>
           <tr v-for="row in rows" :key="row.id" :data-testid="`object-${row.id}`">
             <td><span>{{ row.storage }}</span><br><code>{{ row.objectKey }}</code>
-              <ObjectPreview v-if="['OBSERVING', 'RETAINED', 'RESTORED'].includes(row.state)"
+              <p>文件类型：{{ fileType(row.objectKey) }}</p>
+              <ObjectPreview v-if="managedImage(row.objectKey) && ['OBSERVING', 'RETAINED', 'RESTORED'].includes(row.state)"
                 :src="`/api/admin/attachments/cleanup/${row.id}/preview`"
                 :original="`/api/admin/attachments/cleanup/${row.id}/preview?download=true`" download />
-              <span v-else>不可预览</span>
+              <span v-else>{{ managedImage(row.objectKey) ? '不可预览' : '不支持此文件：仅可预览或下载系统管理的图片' }}</span>
             </td>
             <td>{{ bytes(row.sizeBytes) }}</td>
             <td>{{ label(row.state) }}<p v-if="row.lastError" class="error">{{ row.lastError }}</p></td>
@@ -55,6 +57,8 @@ const rows = ref([]), report = ref({}), total = ref(0), page = ref(1)
 const loading = ref(false), busy = ref(false), error = ref(''), scanResult = ref(null)
 const labels = { OBSERVING: '观察中', RETAINED: '引用保护', RESTORED: '已恢复保留', PURGING: '清理待完成', DELETED: '已物理删除', MISSING: '对象已不存在' }
 const label = state => labels[state] || state
+const managedImage = key => typeof key === 'string' && /^[0-9]{4}(?:0[1-9]|1[0-2])\/[a-f0-9]{32}\.(?:jpg|jpeg|png|gif|webp)$/.test(key)
+const fileType = key => { const extension = String(key || '').match(/\.([a-z0-9]{1,10})$/i)?.[1]; return extension ? extension.toUpperCase() : '未知' }
 const bytes = value => Number(value) < 1024 ? `${Number(value)} B` : Number(value) < 1048576 ? `${(Number(value) / 1024).toFixed(1)} KB` : `${(Number(value) / 1048576).toFixed(2)} MB`
 const date = value => value ? new Date(value).toLocaleString() : '—'
 
