@@ -1,4 +1,6 @@
 import http from './http'
+export const adminCommentNotifications = commentId => http.get('/admin/notifications', { params: { commentId } })
+export const retractNotification = id => http.delete(`/admin/notifications/${id}`)
 
 // 通知接口（M4）：分页/未读数/已读
 // type 可空：COMMENT_REPLY/MENTION/ARTICLE_LIKE/FOLLOW/PRIVATE_MESSAGE/SYSTEM
