@@ -21,6 +21,36 @@ test('owner reauthentication → freeze admin → old session denied → unfreez
   const row = page.locator('tr').filter({ hasText: fixture.accounts.admin })
   await row.getByRole('button', { name: '应急处置' }).click()
   let dialog = page.getByRole('dialog', { name: '管理员应急处置' })
+  // Visibility alone misses fixed table cells painting above a nested overlay.
+  // Check the panel and the background fixed cells before touching credentials.
+  const panel = dialog.locator('.el-dialog')
+  for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport)
+    await expect(panel).toBeVisible()
+    await expect.poll(() => panel.evaluate(element => {
+      const r = element.getBoundingClientRect()
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+      return r.width > 0 && r.left >= 0 && r.right <= window.innerWidth &&
+        r.top >= 0 && r.bottom <= window.innerHeight && element.contains(hit)
+    })).toBe(true)
+    await expect.poll(() => dialog.evaluate(element => {
+      const cells = [...document.querySelectorAll('td.el-table-fixed-column--right')]
+      return cells.length > 0 && cells.every(cell => {
+        const r = cell.getBoundingClientRect()
+        const x = r.left + r.width / 2, y = r.top + r.height / 2
+        if (x < 0 || x >= innerWidth || y < 0 || y >= innerHeight) return true
+        return element.contains(document.elementFromPoint(x, y))
+      })
+    })).toBe(true)
+    await dialog.locator('.el-select').click()
+    await page.getByRole('option', { name: '修正邮箱', exact: true }).click()
+    await expect(dialog.getByRole('textbox', { name: '新邮箱', exact: true })).toBeVisible()
+    await page.screenshot({ path: `e2e-artifacts/owner-dialog-${viewport.width}.png` })
+  }
+  await dialog.getByRole('button', { name: 'Close this dialog' }).click()
+  await expect(dialog).not.toBeVisible()
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await row.getByRole('button', { name: '应急处置' }).click()
   await dialog.locator('.el-select').click()
   await page.getByRole('option', { name: '冻结账号', exact: true }).click()
   await dialog.locator('input[type=password]').fill('incorrect-password')

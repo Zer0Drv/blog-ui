@@ -1,7 +1,7 @@
 <template>
   <el-button v-if="auth.user?.role === 'SUPER_ADMIN' && user.role === 'ADMIN'" link type="danger" @click="open = true">应急处置</el-button>
-  <el-dialog v-model="open" title="管理员应急处置" width="520px" @closed="clear">
-    <p>目标：{{ user.username }}。操作将撤销目标全部会话；所有权转移后你将降为普通管理员并退出。</p>
+  <el-dialog v-model="open" title="管理员应急处置" width="min(520px, calc(100vw - 32px))" append-to-body class="owner-operations-dialog" @closed="clear">
+    <p class="owner-operations-description">目标：{{ user.username }}。操作将撤销目标全部会话；所有权转移后你将降为普通管理员并退出。</p>
     <el-form label-width="120px" @submit.prevent="submit">
       <el-form-item label="操作"><el-select v-model="action">
         <el-option v-for="[value,label] in actions" :key="value" :value="value" :label="label" />
@@ -38,3 +38,9 @@ async function submit() {
   } catch { /* API feedback */ } finally { busy.value = false; password.value = ''; code.value = '' }
 }
 </script>
+
+<style scoped>
+.owner-operations-description {
+  overflow-wrap: anywhere;
+}
+</style>
