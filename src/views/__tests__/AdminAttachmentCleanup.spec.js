@@ -100,3 +100,21 @@ it('清理中对象提供重试，已删除对象没有恢复入口', async () =
   expect(wrapper.text()).toContain('删除未完成')
   expect(wrapper.find('[data-testid="restore-2"]').exists()).toBe(false)
 })
+
+it('展示文件类型，只为仍存在的受管理图片提供预览和下载', async () => {
+  records[0].objectKey = `202610/${'a'.repeat(32)}.png`
+  records[1].objectKey = `202610/${'b'.repeat(32)}.svg`
+  await open()
+  const image = wrapper.get('[data-testid="object-1"]')
+  const unsupported = wrapper.get('[data-testid="object-2"]')
+  expect(image.text()).toContain('文件类型：PNG')
+  expect(image.get('a').text()).toBe('下载原文件')
+  expect(unsupported.text()).toContain('文件类型：SVG')
+  expect(unsupported.text()).toContain('不支持此文件')
+  expect(unsupported.find('img').exists()).toBe(false)
+  expect(unsupported.find('a').exists()).toBe(false)
+  records[0].state = 'MISSING'
+  await button('refresh').trigger('click'); await flushPromises()
+  expect(wrapper.get('[data-testid="object-1"]').text()).toContain('不可预览')
+  expect(wrapper.get('[data-testid="object-1"]').find('a').exists()).toBe(false)
+})

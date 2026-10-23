@@ -25,27 +25,33 @@ const emit = defineEmits(['recovered'])
 const auth = useAuthStore()
 const capability = ref({}), busy = ref(false), open = ref(false), password = ref(''), code = ref(''), confirmation = ref(''), message = ref('')
 const pending = computed(() => props.rows.filter(row => row.restartRequired))
-let timer, job
+let timer, job, polling = false, disposed = false
 async function poll() {
-  if (!job) return
+  if (!job || polling || disposed) return
+  const activeJob = job
   if (Date.now() - job.started > 240000) {
     message.value = '恢复验证超时，请人工检查服务；不能确认重启成功。'
     busy.value = false; clearInterval(timer); return
   }
+  polling = true
   try {
-    const result = await http.get(`/admin/operations/restart/${job.id}`, { silent: true })
+    const result = await http.get(`/admin/operations/restart/${activeJob.id}`, { silent: true })
+    if (disposed || job !== activeJob) return
     if (result.state === 'FAILED') {
       message.value = result.reason; busy.value = false; clearInterval(timer); return
     }
     if (result.state !== 'RECOVERED') return
     const current = await http.get('/admin/operations/restart', { silent: true })
-    if (current.instance === job.instance) return
+    if (disposed || job !== activeJob || !current.instance || current.instance === activeJob.instance) return
     const rows = await getSysConfig()
-    const effective = job.expected.every(([key,value]) => rows.some(row => row.key === key && !row.restartRequired && JSON.stringify(row.activeValue) === JSON.stringify(value)))
+    if (disposed || job !== activeJob) return
+    const effective = activeJob.expected.every(([key,value]) => rows.some(row => row.key === key && !row.restartRequired && JSON.stringify(row.activeValue) === JSON.stringify(value)))
+    capability.value = current
     message.value = effective ? '后端与网关已恢复，待生效参数验证通过。' : '服务已恢复，但参数生效验证未通过，请检查系统参数。'
     busy.value = false; clearInterval(timer); sessionStorage.removeItem('application-restart'); job = null
     emit('recovered')
   } catch { /* A disconnect during restart is expected, never proof of success. */ }
+  finally { polling = false }
 }
 async function restart() {
   if (props.dirty || busy.value) return
@@ -56,14 +62,19 @@ async function restart() {
   try {
     await http.post('/admin/operations/restart', { id: job.id, password: password.value, code: code.value, confirmation: confirmation.value })
   } catch (error) {
-    if (error.response || error.code) { busy.value = false; job = null; sessionStorage.removeItem('application-restart'); return }
+    // Gateway/server failures may arrive after acceptance; retain the job for verification.
+    if ((error.response?.status >= 400 && error.response?.status < 500) || /^4\d+$/.test(String(error.code || ''))) {
+      message.value = error.message || '重启请求被拒绝。'
+      busy.value = false; job = null; sessionStorage.removeItem('application-restart'); return
+    }
   } finally { open.value = false; password.value = ''; code.value = ''; confirmation.value = '' }
-  timer = setInterval(poll, 3000)
+  if (!disposed) timer = setInterval(poll, 3000)
 }
 onMounted(async () => {
   try { capability.value = await http.get('/admin/operations/restart', { silent: true }) } catch { capability.value = { reason: '无法确认运维能力，请刷新或联系服务器管理员。' } }
+  if (disposed) return
   try { job = JSON.parse(sessionStorage.getItem('application-restart')); if (job) { busy.value = true; timer = setInterval(poll, 3000); void poll() } } catch { /* invalid storage */ }
 })
-onUnmounted(() => clearInterval(timer))
+onUnmounted(() => { disposed = true; clearInterval(timer) })
 </script>
 <style scoped>.restart-panel { margin: 16px 0; }.el-input { margin-bottom: 12px; }</style>
