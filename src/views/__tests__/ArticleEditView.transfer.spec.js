@@ -3,7 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import ElementPlus, { ElMessage } from 'element-plus'
 import ArticleEditView from '../ArticleEditView.vue'
-import { exportArticle, getArticle, getAutosave, importArticle, updateArticle } from '../../api/article'
+import { autosaveArticle, exportArticle, getArticleEditing as getArticle, getAutosave, importArticle, updateArticle } from '../../api/article'
 import { useAuthStore } from '../../stores/auth'
 
 const routerPush = vi.hoisted(() => vi.fn())
@@ -23,15 +23,16 @@ vi.mock('md-editor-v3', () => ({ MdEditor: { template: '<div />' } }))
 vi.mock('../../components/RichEditor.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../../components/AttachmentPicker.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('../../components/VersionHistoryDrawer.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../../components/MdContentPreview.vue', () => ({ default: { template: '<div />' } }))
 
 vi.mock('../../api/article', () => ({
   createArticle: vi.fn(),
   exportArticle: vi.fn(),
-  getArticle: vi.fn(),
+  getArticleEditing: vi.fn(),
   getAutosave: vi.fn(),
   importArticle: vi.fn(),
   updateArticle: vi.fn(),
-  autosaveArticle: vi.fn()
+  autosaveArticle: vi.fn(), publishArticle: vi.fn(), discardArticleWorkingCopy: vi.fn(), restoreArticleVersion: vi.fn()
 }))
 vi.mock('../../api/category', () => ({ listCategories: vi.fn().mockResolvedValue([]) }))
 vi.mock('../../api/tag', () => ({ listTags: vi.fn().mockResolvedValue([]) }))
@@ -76,6 +77,7 @@ describe('ArticleEditView 导入/导出入口（Zer0Drv/blog#16）', () => {
     localStorage.clear()
     routeParams.id = undefined
     exportArticle.mockResolvedValue(undefined)
+    autosaveArticle.mockImplementation(async (_id, body) => ({ ...body, editRevision: body.editRevision + 1, activeStatus: 'DRAFT', hasWorkingCopy: true }))
     vi.spyOn(ElMessage, 'error').mockImplementation(() => {})
     vi.spyOn(ElMessage, 'success').mockImplementation(() => {})
     vi.spyOn(ElMessage, 'warning').mockImplementation(() => {})
@@ -96,7 +98,7 @@ describe('ArticleEditView 导入/导出入口（Zer0Drv/blog#16）', () => {
     getArticle.mockResolvedValue({
       id: 42, title: '我的文章', summary: '', cover: '', categoryId: null,
       tagIds: [], editorType: 'MARKDOWN', content: '# 正文', status: 'DRAFT',
-      author: { id: 7 }, updateTime: '2026-01-01T10:00:00'
+      author: { id: 7 }, updateTime: '2026-01-01T10:00:00', editRevision: 0, activeStatus: 'DRAFT'
     })
     getAutosave.mockResolvedValue({ exists: false })
     const wrapper = mountView()
@@ -142,10 +144,10 @@ describe('ArticleEditView 导入/导出入口（Zer0Drv/blog#16）', () => {
     routeParams.id = '42'
     getArticle.mockResolvedValue({
       id: 42, title: '密码文章', editorType: 'MARKDOWN', content: '# 正文',
-      status: 'DRAFT', visibility: 'PASSWORD', author: { id: 7 }
+      status: 'DRAFT', visibility: 'PASSWORD', author: { id: 7 }, editRevision: 0, activeStatus: 'DRAFT', passwordConfigured: true
     })
     getAutosave.mockResolvedValue({ exists: false })
-    updateArticle.mockResolvedValue(undefined)
+    updateArticle.mockImplementation(async (_id, body) => ({ ...body, editRevision: body.editRevision + 1, activeStatus: 'DRAFT', passwordConfigured: body.visibility === 'PASSWORD' }))
     const wrapper = mountView()
     await flushPromises()
     expect(wrapper.find('input[type="password"]').attributes('placeholder')).toContain('保留原口令')

@@ -17,7 +17,7 @@
       <el-table-column label="操作" width="110" fixed="right">
         <template #default="{ row }">
           <el-button size="small" link type="primary" @click="onPreview(row)">查看</el-button>
-          <el-button size="small" link type="warning" @click="onRestore(row)">恢复</el-button>
+          <el-button size="small" link type="warning" :disabled="busy" @click="emit('restore', row.version)">恢复</el-button>
         </template>
       </el-table-column>
       <template #empty>
@@ -48,16 +48,17 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { getArticleVersion, listArticleVersions, restoreArticleVersion } from '../api/article'
+import { getArticleVersion, listArticleVersions } from '../api/article'
 import { sanitizeHtml } from '../utils/sanitize'
 import MdContentPreview from './MdContentPreview.vue'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
-  articleId: { type: [String, Number], required: true }
+  articleId: { type: [String, Number], required: true },
+  busy: { type: Boolean, default: false }
 })
-const emit = defineEmits(['update:visible', 'restored'])
+// The editor owns flushing, the revision token and restore confirmation.
+const emit = defineEmits(['update:visible', 'restore'])
 
 const versions = ref([])
 const loading = ref(false)
@@ -87,22 +88,6 @@ async function onPreview(row) {
   } catch { /* 拦截器已提示 */ } finally {
     previewLoading.value = false
   }
-}
-
-async function onRestore(row) {
-  try {
-    await ElMessageBox.confirm(
-      `确认恢复到版本 v${row.version}？当前内容会先自动留存一个新快照。`,
-      '恢复版本',
-      { type: 'warning', confirmButtonText: '恢复', cancelButtonText: '取消' }
-    )
-  } catch { return }
-  try {
-    await restoreArticleVersion(props.articleId, row.version)
-    ElMessage.success(`已恢复到版本 v${row.version}`)
-    emit('restored')
-    load()
-  } catch { /* 拦截器已提示 */ }
 }
 
 function formatTime(t) {

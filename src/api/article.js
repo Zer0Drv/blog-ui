@@ -32,6 +32,19 @@ export function updateArticle(id, data) {
   return http.put(`/articles/${id}`, data)
 }
 
+// 作者工作区与公开详情分离：已发布文章的保存不会替换线上版本。
+export function getArticleEditing(id) {
+  return http.get(`/articles/${id}/editing`)
+}
+
+export function publishArticle(id, data) {
+  return http.post(`/articles/${id}/publish`, data)
+}
+
+export function discardArticleWorkingCopy(id, editRevision) {
+  return http.delete(`/articles/${id}/working-copy`, { params: { editRevision } })
+}
+
 export function deleteArticle(id) {
   return http.delete(`/articles/${id}`)
 }
@@ -44,7 +57,7 @@ export function pageMyArticles(params) {
   return http.get('/articles/mine', { params })
 }
 
-// 自动保存（仅已有文章；正式保存成功后后端会自删）
+// 自动保存写入持久工作稿，响应携带新的 editRevision。
 export function autosaveArticle(id, data) {
   return http.put(`/articles/${id}/autosave`, data)
 }
@@ -62,8 +75,8 @@ export function getArticleVersion(id, version) {
   return http.get(`/articles/${id}/versions/${version}`)
 }
 
-export function restoreArticleVersion(id, version) {
-  return http.post(`/articles/${id}/restore/${version}`)
+export function restoreArticleVersion(id, version, editRevision) {
+  return http.post(`/articles/${id}/restore/${version}`, null, { params: { editRevision } })
 }
 
 // 回收站

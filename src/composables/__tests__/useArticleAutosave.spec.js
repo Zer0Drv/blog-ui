@@ -87,6 +87,33 @@ describe('useArticleAutosave 状态机', () => {
     expect(api.status.value).toBe('clean')
   })
 
+  it('默认本地轨排除明文口令，工作稿的其余字段仍可恢复', async () => {
+    const { api, wrapper } = mountAutosave({ articleId: ref(null), buildBody: () => ({ ...BODY, accessPassword: 'never-store-me', slug: 'draft-address' }) })
+    api.markInitialized()
+    api.notifyChanged()
+    await api.flush()
+    expect(JSON.parse(localStorage.getItem(DRAFT_NEW_KEY))).toMatchObject({ title: BODY.title, slug: 'draft-address' })
+    expect(localStorage.getItem(DRAFT_NEW_KEY)).not.toContain('never-store-me')
+    wrapper.unmount()
+  })
+
+  it('放弃前 settle 只等待在途写入，不补发尚未保存的新编辑', async () => {
+    const first = deferred()
+    const { api, saveRemote, wrapper } = setup()
+    saveRemote.mockReturnValueOnce(first.promise)
+    api.markInitialized()
+    api.notifyChanged()
+    await vi.advanceTimersByTimeAsync(30000)
+    api.notifyChanged()
+    const settled = api.settle()
+    first.resolve({})
+    await settled
+    expect(saveRemote).toHaveBeenCalledTimes(1)
+    expect(api.dirty.value).toBe(true)
+    api.markClean()
+    wrapper.unmount()
+  })
+
   it('默认 saveLocal：写 localStorage draft:new 并带 savedAt', async () => {
     const saveRemote = vi.fn()
     const { api } = mountAutosave({

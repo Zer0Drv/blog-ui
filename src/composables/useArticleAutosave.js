@@ -3,7 +3,8 @@ import { autosaveArticle } from '../api/article'
 import { AUTOSAVE_DELAY, DRAFT_NEW_KEY, formatClock } from '../utils/articleEdit'
 
 function defaultSaveLocal(body) {
-  localStorage.setItem(DRAFT_NEW_KEY, JSON.stringify({ ...body, savedAt: Date.now() }))
+  const { accessPassword, ...safeBody } = body
+  localStorage.setItem(DRAFT_NEW_KEY, JSON.stringify({ ...safeBody, savedAt: Date.now() }))
 }
 
 /**
@@ -16,6 +17,7 @@ export function useArticleAutosave({
   buildBody,
   saveRemote = autosaveArticle,
   saveLocal = defaultSaveLocal,
+  onError = () => {},
   delay = AUTOSAVE_DELAY
 }) {
   const dirty = ref(false)
@@ -86,8 +88,9 @@ export function useArticleAutosave({
         lastSavedAt.value = formatClock(data?.savedAt || Date.now())
       }
       return true
-    } catch {
+    } catch (error) {
       // 无新编辑时驻留 dirtyIdle；不自动重试失败的同一版本。
+      if (isCurrent(snapshot)) onError(error)
       return false
     }
   }
@@ -128,6 +131,13 @@ export function useArticleAutosave({
     return true
   }
 
+  // Explicit reload/discard may replace local edits; wait for already-sent writes without sending more.
+  async function settle() {
+    clearTimer()
+    due = false
+    return inFlight ? inFlight.promise : true
+  }
+
   function clearDraft() {
     markClean()
     localStorage.removeItem(DRAFT_NEW_KEY)
@@ -146,5 +156,5 @@ export function useArticleAutosave({
     else persist(snapshot)
   })
 
-  return { status, tip, notifyChanged, markInitialized, markClean, clearDraft, flush }
+  return { status, tip, dirty, notifyChanged, markInitialized, markClean, clearDraft, flush, settle }
 }

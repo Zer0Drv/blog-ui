@@ -34,6 +34,7 @@
         <el-table-column prop="title" label="标题" min-width="220" show-overflow-tooltip>
           <template #default="{ row }">
             <el-link type="primary" @click="goView(row)">{{ row.title }}</el-link>
+            <el-tag v-if="row.hasWorkingCopy" type="warning" size="small">有修改草稿</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100">
@@ -146,6 +147,11 @@ function goView(row) {
 }
 
 async function onChangeStatus(row, target) {
+  if (target === 'PUBLISHED' && row.hasWorkingCopy) {
+    ElMessage.info('请先在编辑器中审阅修改草稿，再确认发布')
+    router.push(`/editor/${row.id}`)
+    return
+  }
   const action = target === 'PUBLISHED' ? '发布' : '下架'
   try {
     await ElMessageBox.confirm(`确认${action}《${row.title}》？`, '提示', { type: 'warning' })
