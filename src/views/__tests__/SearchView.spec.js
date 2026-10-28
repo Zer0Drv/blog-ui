@@ -118,6 +118,48 @@ describe('SearchView 查询、导航和结果', () => {
     expect(wrapper.get('.article-card').text()).toContain('文章 2')
   })
 
+  it('按服务端实际命中词高亮 FULLTEXT 部分中文匹配及正文深处片段', async () => {
+    searchArticles.mockResolvedValue(response([{
+      ...article(1, '搜索实践', '…正文深处介绍搜索与索引的关系…'), highlightTerms: ['搜索']
+    }]))
+    await open({ keyword: '搜索功能' })
+    expect(wrapper.get('.title mark').text()).toBe('搜索')
+    expect(wrapper.get('.summary mark').text()).toBe('搜索')
+    expect(wrapper.get('.summary').text()).toBe('…正文深处介绍搜索与索引的关系…')
+    expect(wrapper.get('.result-tip').text()).toContain('搜索功能')
+  })
+
+  it('缺失命中词时兼容字面关键词，LIKE 不猜测 ngram 且空数组明确禁用高亮', async () => {
+    searchArticles.mockResolvedValue(response([article(1, '搜索实践', '介绍搜索')], { searchMode: 'LIKE', effectiveSort: 'newest' }))
+    await open({ keyword: '搜索功能' })
+    expect(wrapper.find('mark').exists()).toBe(false)
+    searchArticles.mockResolvedValueOnce(response([article(1, '搜索功能', '介绍搜索功能')], { searchMode: 'LIKE', effectiveSort: 'newest' }))
+    await submit('搜索功能')
+    expect(wrapper.findAll('mark')).toHaveLength(2)
+    searchArticles.mockResolvedValueOnce(response([{
+      ...article(1, '搜索功能', '介绍搜索功能'), highlightTerms: []
+    }]))
+    await submit('搜索功能')
+    expect(wrapper.find('mark').exists()).toBe(false)
+    expect(wrapper.get('.summary').text()).toBe('介绍搜索功能')
+  })
+
+  it('服务端命中词中的 HTML 与正则符号仍仅作为字面文本显示', async () => {
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    const attack = '<img src=x onerror=alert(1)>'
+    const text = `${attack} a+b [x]`
+    searchArticles.mockResolvedValue(response([{
+      ...article(1, text, text), highlightTerms: [attack, 'a+b', '[x]']
+    }]))
+    await open({ keyword: '实际检索词' })
+    expect(wrapper.get('.summary').findAll('mark').map(mark => mark.text())).toEqual([attack, 'a+b', '[x]'])
+    expect(wrapper.get('.title').text()).toBe(text)
+    expect(wrapper.get('.summary').text()).toBe(text)
+    expect(wrapper.find('.article-card img').exists()).toBe(false)
+    expect(wrapper.find('.article-card script').exists()).toBe(false)
+    expect(alert).not.toHaveBeenCalled()
+  })
+
   it('旧请求完成或失败不能覆盖新查询、加载状态、计数和排序提示', async () => {
     const old = deferred(), current = deferred(), last = deferred()
     searchArticles.mockReturnValueOnce(old.promise).mockReturnValueOnce(current.promise).mockReturnValueOnce(last.promise)

@@ -30,6 +30,10 @@ test('search combines filters, preserves pagination history and safely highlight
     title: '优惠说明', content: '正文只说明活动规则', summary: '折扣 50% 限时优惠',
     editorType: 'MARKDOWN', status: 'PUBLISHED', categoryId, tagIds: [tagId]
   } }))
+  await data(await page.request.post('/api/articles', { headers, data: {
+    title: '中文分词样本', content: `${'前言'.repeat(180)}搜索${'后续'.repeat(80)}`,
+    editorType: 'MARKDOWN', status: 'PUBLISHED', categoryId, tagIds: [tagId]
+  } }))
   const readerContext = await browser.newContext()
   const reader = await readerContext.newPage()
   try {
@@ -39,7 +43,7 @@ test('search combines filters, preserves pagination history and safely highlight
     await expect(reader.locator('.article-card')).toHaveCount(10)
     await expect(reader.locator('.result-tip')).toContainText('12')
     await expect(reader.getByText(`${marker} secret draft`)).toHaveCount(0)
-    await expect(reader.locator('.summary mark').first()).toHaveText(marker)
+    await expect(reader.locator('.summary mark').filter({ hasText: marker }).first()).toHaveText(marker)
     await expect(reader.locator('.article-card script')).toHaveCount(0)
     expect(await reader.evaluate(() => window.searchInjected)).toBeUndefined()
     await expect(reader.getByLabel('分类', { exact: true })).toHaveValue(String(categoryId))
@@ -68,6 +72,10 @@ test('search combines filters, preserves pagination history and safely highlight
     await expect(reader.locator('.article-card')).toHaveCount(1)
     await expect(reader.locator('.summary mark')).toHaveText('%')
     await expect(reader.locator('.sort-notice')).toContainText('字面包含匹配')
+    await reader.getByLabel('关键词', { exact: true }).fill('搜索功能')
+    await reader.getByRole('button', { name: '搜索', exact: true }).click()
+    await expect(reader.locator('.article-card')).toHaveCount(1)
+    await expect(reader.locator('.summary mark')).toHaveText('搜索')
     await reader.getByLabel('关键词', { exact: true }).fill(`not-present-${fixture.runId}`)
     await reader.getByRole('button', { name: '搜索', exact: true }).click()
     await expect(reader.locator('.article-card')).toHaveCount(0)

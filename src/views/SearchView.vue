@@ -51,8 +51,8 @@
         <article v-for="a in articles" :key="a.id" class="article-card">
           <img v-if="a.cover" :src="resolveUploadUrl(a.cover)" class="cover" alt="" loading="lazy" />
           <div class="info">
-            <h2 class="title"><RouterLink :to="articlePath(a)"><SearchHighlight :text="a.title" :keyword="applied.keyword" /></RouterLink></h2>
-            <p class="summary"><SearchHighlight :text="a.snippet ?? a.summary" :keyword="applied.keyword" /></p>
+            <h2 class="title"><RouterLink :to="articlePath(a)"><SearchHighlight :text="a.title" :keyword="applied.keyword" :terms="a.highlightTerms" /></RouterLink></h2>
+            <p class="summary"><SearchHighlight :text="a.snippet ?? a.summary" :keyword="applied.keyword" :terms="a.highlightTerms" /></p>
             <div class="meta">
               <span>{{ a.author?.nickname || a.author?.username }}</span>
               <time :datetime="a.publishTime || a.createTime">{{ formatTime(a.publishTime || a.createTime) }}</time>
