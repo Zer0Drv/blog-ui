@@ -28,16 +28,17 @@ export function formatClock(t) {
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
 }
 
-// 自动保存请求体。正文纯文本为空返回 null（后端 content 非空校验，不落轨）。
-// 注意：判空用「去标签 + trim」，但落库的 content 保留原文，与现状一致。
+// 完整草稿字段，允许临时空标题/正文。明文口令仅在远程保存时单独添加，不能进入本地草稿。
 export function buildAutosaveBody(form, content) {
-  if (!stripHtml(content).trim()) return null
   return {
     title: form.title.trim(),
     content,
     summary: form.summary,
+    slug: form.slug || '',
     cover: form.cover,
     categoryId: form.categoryId || null,
+    tagIds: [...(form.tagIds || [])],
+    editorType: form.editorType || 'MARKDOWN',
     ...(form.visibility ? { visibility: form.visibility } : {})
   }
 }
@@ -113,6 +114,9 @@ export function draftToFormPatch(draft) {
   if (draft.title != null) patch.title = draft.title
   if (draft.summary != null) patch.summary = draft.summary
   if (draft.cover != null) patch.cover = draft.cover
+  if (draft.slug != null) patch.slug = draft.slug
+  if (Array.isArray(draft.tagIds)) patch.tagIds = [...draft.tagIds]
+  if (['MARKDOWN', 'RICHTEXT'].includes(draft.editorType)) patch.editorType = draft.editorType
   if (['PUBLIC', 'PASSWORD', 'PRIVATE'].includes(draft.visibility)) patch.visibility = draft.visibility
   if (draft.categoryId !== undefined) patch.categoryId = draft.categoryId || null
   if (draft.content != null) patch.content = draft.content
@@ -136,7 +140,7 @@ export function articleToFormState(a) {
     tagIds: (a.tags || []).map(t => t.id),
     editorType: a.editorType || 'MARKDOWN',
     visibility: a.visibility || 'PUBLIC',
-    hasAccessPassword: a.visibility === 'PASSWORD',
+    hasAccessPassword: a.passwordConfigured ?? a.hasAccessPassword ?? a.visibility === 'PASSWORD',
     accessPassword: '',
     mdContent: toMd ? a.content || '' : null,
     htmlContent: toMd ? null : a.content || ''

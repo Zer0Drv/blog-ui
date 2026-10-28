@@ -23,7 +23,7 @@ async function responseData(response) {
   return result.data
 }
 
-test('login → edit → real Redis autosave → refresh recovery → publish → anonymous reading and search', async ({ page, browser }, info) => {
+test('login → edit → durable autosave → refresh recovery → publish → anonymous reading and search', async ({ page, browser }, info) => {
   const data = await login(page)
   const id = data.articles['draft-a']
   const title = `Browser published ${data.runId}`
@@ -33,12 +33,12 @@ test('login → edit → real Redis autosave → refresh recovery → publish �
   await titleInput(page).fill(title)
   await markdown(page).fill(content)
   await expect(page.getByText(/已自动保存/)).toBeVisible({ timeout: 45000 })
-  const draft = await responseData(await page.request.get(`/api/articles/${id}/autosave`))
+  const draft = await responseData(await page.request.get(`/api/articles/${id}/editing`))
+  expect(draft.hasWorkingCopy).toBe(true)
   expect(draft.content).toBe(content)
   expect(draft.title).toBe(title)
   await page.reload()
-  await expect(page.getByRole('dialog', { name: '恢复草稿' })).toBeVisible()
-  await page.getByRole('button', { name: '恢复', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: '恢复草稿' })).toHaveCount(0)
   await expect(titleInput(page)).toHaveValue(title)
   await expect(markdown(page)).toHaveText(content, { useInnerText: true })
   await page.getByRole('button', { name: '发布', exact: true }).click()
@@ -75,7 +75,8 @@ test('import from an edited draft → switch to imported article → save withou
   await expect(titleInput(page)).toHaveValue(importedTitle)
   const importedId = new URL(page.url()).pathname.split('/').at(-1)
   expect(importedId).not.toBe(String(originalId))
-  const draft = await responseData(await page.request.get(`/api/articles/${originalId}/autosave`))
+  const draft = await responseData(await page.request.get(`/api/articles/${originalId}/editing`))
+  expect(draft.hasWorkingCopy).toBe(true)
   expect(draft.content).toBe(originalContent)
   expect(draft.title).toBe(originalTitle)
   await page.getByRole('button', { name: '保存草稿', exact: true }).click()

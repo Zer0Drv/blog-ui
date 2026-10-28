@@ -63,10 +63,10 @@ describe('buildAutosaveBody', () => {
     categoryId: 3
   }
 
-  it('正文纯文本为空返回 null（空串 / 纯空白 / 纯标签）', () => {
-    expect(buildAutosaveBody(form, '')).toBeNull()
-    expect(buildAutosaveBody(form, '   \n  ')).toBeNull()
-    expect(buildAutosaveBody(form, '<p><br></p>')).toBeNull()
+  it('临时空正文仍可落入工作稿，避免刷新恢复成旧内容', () => {
+    expect(buildAutosaveBody(form, '').content).toBe('')
+    expect(buildAutosaveBody(form, '   \n  ').content).toBe('   \n  ')
+    expect(buildAutosaveBody(form, '<p><br></p>').content).toBe('<p><br></p>')
   })
 
   it('标题 trim、正文保留原文、categoryId 空值归一 null', () => {
@@ -75,8 +75,11 @@ describe('buildAutosaveBody', () => {
       title: '标题',
       content: '正文内容',
       summary: '摘要',
+      slug: '',
       cover: '/files/cover.png',
-      categoryId: 3
+      categoryId: 3,
+      tagIds: [],
+      editorType: 'MARKDOWN'
     })
     expect(buildAutosaveBody({ ...form, categoryId: undefined }, 'x').categoryId).toBeNull()
     expect(buildAutosaveBody({ ...form, categoryId: 0 }, 'x').categoryId).toBeNull()

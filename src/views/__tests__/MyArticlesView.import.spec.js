@@ -3,7 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import ElementPlus, { ElMessage } from 'element-plus'
 import MyArticlesView from '../MyArticlesView.vue'
-import { pageMyArticles, importArticle, exportArticle } from '../../api/article'
+import { pageMyArticles, importArticle, exportArticle, updateArticleStatus } from '../../api/article'
 
 const routerPush = vi.hoisted(() => vi.fn())
 
@@ -48,6 +48,18 @@ describe('MyArticlesView 导入文章', () => {
     vi.spyOn(ElMessage, 'error').mockImplementation(() => {})
     vi.spyOn(ElMessage, 'success').mockImplementation(() => {})
     vi.spyOn(ElMessage, 'warning').mockImplementation(() => {})
+  })
+
+  it('存在修改草稿的文章发布前跳到编辑器审阅，不能从列表直接发布', async () => {
+    pageMyArticles.mockResolvedValue({ records: [{ id: 93, title: '待审阅草稿', status: 'DRAFT', hasWorkingCopy: true }], total: 1 })
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.text()).toContain('有修改草稿')
+    await wrapper.findAll('button').find(b => b.text().trim() === '发布' && !b.element.closest('.hidden-columns')).trigger('click')
+    await flushPromises()
+    expect(routerPush).toHaveBeenCalledWith('/editor/93')
+    expect(updateArticleStatus).not.toHaveBeenCalled()
+    wrapper.unmount()
   })
 
   it('拒绝不支持的扩展名，不发起导入请求', async () => {
