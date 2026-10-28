@@ -14,6 +14,7 @@ vi.mock('md-editor-v3', () => ({ MdCatalog: { template: '<div />' } }))
 vi.mock('../../components/MdContentPreview.vue', () => ({ default: { props: ['content'], template: '<div class="body">{{ content }}</div>' } }))
 vi.mock('../../components/CommentSection.vue', () => ({ default: { template: '<div class="comments" />' } }))
 vi.mock('../../components/CaptchaInput.vue', () => ({ default: { props: ['scene'], template: '<div class="captcha">{{ scene }}</div>' } }))
+vi.mock('../../components/ArticleSeriesNavigation.vue', () => ({ default: { props: ['articleId'], template: '<div class="series-navigation">系列 {{ articleId }}</div>' } }))
 
 const gate = { id: 7, slug: 'secret-post', visibility: 'PASSWORD', passwordRequired: true }
 const unlocked = { ...gate, passwordRequired: false, title: '受保护标题', content: '受保护正文', editorType: 'MARKDOWN' }
@@ -74,6 +75,17 @@ describe('文章密码门禁', () => {
     await flushPromises()
     expect(getArticleBySlug).toHaveBeenLastCalledWith('another-post', '')
     expect(wrapper.text()).not.toContain('受保护正文')
+    wrapper.unmount()
+  })
+
+  it('仅对当前公开可读文章挂载系列导航，作者可查看的未来或受限文章不挂载', async () => {
+    getArticle.mockResolvedValue({ id: 7, title: '公开文章', editorType: 'MARKDOWN', visibility: 'PUBLIC', visible: true })
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.get('.series-navigation').text()).toBe('系列 7')
+    getArticle.mockResolvedValue({ id: 8, title: '尚未到点', editorType: 'MARKDOWN', visibility: 'PUBLIC', visible: false })
+    params.id = '8'; await flushPromises()
+    expect(wrapper.find('.series-navigation').exists()).toBe(false)
     wrapper.unmount()
   })
 })

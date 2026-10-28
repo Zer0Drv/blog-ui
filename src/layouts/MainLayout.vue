@@ -6,6 +6,7 @@
         <nav class="nav">
           <router-link to="/" class="nav-link">首页</router-link>
           <router-link to="/archives" class="nav-link">归档</router-link>
+          <router-link to="/series" class="nav-link">系列</router-link>
           <router-link v-for="page in pageNavigation" :key="page.id" :to="`/pages/${page.slug}`" class="nav-link">{{ page.title }}</router-link>
           <router-link v-if="auth.isLoggedIn" to="/feed" class="nav-link">动态</router-link>
         </nav>
@@ -49,6 +50,7 @@
               <el-dropdown-menu>
                 <el-dropdown-item v-if="auth.isAdmin" command="admin">管理后台</el-dropdown-item>
                 <el-dropdown-item v-if="auth.canWrite" command="mine">我的文章</el-dropdown-item>
+                <el-dropdown-item v-if="auth.canWrite" command="series">我的系列</el-dropdown-item>
                 <el-dropdown-item command="favorites">我的收藏</el-dropdown-item>
                 <el-dropdown-item command="messages">私信</el-dropdown-item>
                 <el-dropdown-item command="settings">个人设置</el-dropdown-item>
@@ -172,6 +174,8 @@ async function onCommand(cmd) {
     router.push('/admin')
   } else if (cmd === 'mine') {
     router.push('/my/articles')
+  } else if (cmd === 'series') {
+    router.push('/my/series')
   } else if (cmd === 'favorites') {
     router.push('/my/favorites')
   } else if (cmd === 'messages') {

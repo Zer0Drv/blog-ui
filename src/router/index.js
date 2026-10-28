@@ -29,6 +29,11 @@ const routes = [
       // P0 阅读侧：归档/全文搜索（公开，组件由 frontend-E 提供）
       { path: 'archives', name: 'archives', component: () => import('../views/ArchivesView.vue'), meta: { public: true, title: '归档' } },
       { path: 'search', name: 'search', component: () => import('../views/SearchView.vue'), meta: { public: true, title: '搜索' } },
+      { path: 'series', name: 'series', component: () => import('../views/SeriesListView.vue'), meta: { public: true, title: '系列' } },
+      { path: 'series/:slug', name: 'series-detail', component: () => import('../views/SeriesDetailView.vue'), meta: { public: true, title: '系列' } },
+      { path: 'my/series', name: 'my-series', component: () => import('../views/MySeriesView.vue'), meta: { roles: ROLE_GROUPS.WRITERS, title: '我的系列' } },
+      { path: 'my/series/new', name: 'series-new', component: () => import('../views/SeriesEditView.vue'), meta: { roles: ROLE_GROUPS.WRITERS, title: '新建系列' } },
+      { path: 'my/series/:id(\\d+)', name: 'series-edit', component: () => import('../views/SeriesEditView.vue'), meta: { roles: ROLE_GROUPS.WRITERS, title: '编辑系列' } },
       // P1 友情链接公开页（issue #17）
       { path: 'links', name: 'friend-links', component: () => import('../views/FriendLinksView.vue'), meta: { public: true, title: '友情链接' } },
       { path: 'my/articles', name: 'my-articles', component: () => import('../views/MyArticlesView.vue'), meta: { roles: ROLE_GROUPS.WRITERS, title: '我的文章' } },

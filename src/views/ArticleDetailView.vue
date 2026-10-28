@@ -93,6 +93,7 @@
         </div>
       </el-card>
 
+          <ArticleSeriesNavigation v-if="article.visible === true" :key="article.id" :article-id="article.id" />
           <CommentSection v-if="!article.visibility || article.visibility === 'PUBLIC'" :article-id="article.id" @change="onCommentChange" />
         </div>
 
@@ -137,6 +138,7 @@ import { loadArticleMetadata } from '../utils/articleMetadata'
 import CommentSection from '../components/CommentSection.vue'
 import MdContentPreview from '../components/MdContentPreview.vue'
 import CaptchaInput from '../components/CaptchaInput.vue'
+import ArticleSeriesNavigation from '../components/ArticleSeriesNavigation.vue'
 
 const route = useRoute()
 const router = useRouter()
