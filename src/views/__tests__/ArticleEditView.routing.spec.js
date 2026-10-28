@@ -137,6 +137,7 @@ describe('编辑器文章生命周期（真实 Vue Router，#51 / #52 / #93）',
 
   it('A → B → 后退 A → 前进 B：每次都加载对应正文和元数据', async () => {
     const router = await open()
+    expect(wrapper.find('main.content').classes()).toContain('editor-content')
     await router.push('/editor/2')
     await flushPromises()
     expectArticle(2)
@@ -248,6 +249,7 @@ describe('编辑器文章生命周期（真实 Vue Router，#51 / #52 / #93）',
     await router.push('/my/articles')
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/my/articles')
+    expect(wrapper.find('main.content').classes()).not.toContain('editor-content')
     expect(autosaveArticle).toHaveBeenCalledTimes(1)
     expect(autosaveArticle).toHaveBeenCalledWith('1', expect.objectContaining({ content: '# A 离开前修改' }))
   })

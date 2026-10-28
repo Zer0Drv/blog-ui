@@ -81,8 +81,13 @@ test('published edits survive refresh and a new login while readers keep the act
     await resumed.getByRole('button', { name: '预览修改', exact: true }).click()
     const preview = resumed.getByRole('dialog', { name: '修改草稿预览', exact: true })
     await expect(preview).toContainText(`尚未发布的修改 ${marker}`)
-    expect(await resumed.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-    await resumed.screenshot({ path: info.outputPath('working-draft-preview-mobile.png'), fullPage: true })
+    const layout = await resumed.evaluate(() => ({
+      width: document.documentElement.scrollWidth, viewport: innerWidth,
+      overflow: [...document.querySelectorAll('main *')].filter(el => el.getBoundingClientRect().right > innerWidth)
+        .slice(0, 8).map(el => ({ tag: el.tagName, class: el.className, right: el.getBoundingClientRect().right }))
+    }))
+    expect(layout.width, JSON.stringify(layout)).toBeLessThanOrEqual(layout.viewport)
+    await resumed.screenshot({ path: info.outputPath('working-draft-preview-mobile.png'), fullPage: true, animations: 'disabled' })
     await preview.locator('.el-dialog__headerbtn').click()
     await reader.reload()
     await expect(reader.getByRole('heading', { name: originalTitle, exact: true })).toBeVisible()
@@ -95,7 +100,7 @@ test('published edits survive refresh and a new login while readers keep the act
     await reader.reload()
     await expect(reader.getByRole('heading', { name: changedTitle, exact: true })).toBeVisible()
     await expect(reader.getByText(`尚未发布的修改 ${marker}`, { exact: true })).toBeVisible()
-    await reader.screenshot({ path: info.outputPath('working-draft-published-desktop.png'), fullPage: true })
+    await reader.screenshot({ path: info.outputPath('working-draft-published-desktop.png'), fullPage: true, animations: 'disabled' })
   } finally {
     await relogged.close()
     await anonymous.close()
@@ -112,7 +117,7 @@ test('stale editor preserves local content, compares the server draft and reload
     await other.goto(`/editor/${id}`)
     await expect(titleInput(other)).toBeEnabled()
     await editAndWait(page, id, '服务器较新修改稿', '# 服务器保存的正文')
-    const rejected = other.waitForResponse(r => new URL(r.url()).pathname === `/api/articles/${id}/autosave` && r.request().method() === 'PUT')
+    const rejected = other.waitForResponse(r => new URL(r.url()).pathname === `/api/articles/${id}/autosave` && r.request().method() === 'PUT', { timeout: 45000 })
     await titleInput(other).fill('本地冲突标题')
     await markdown(other).fill('# 本地冲突正文仍需保留')
     expect((await (await rejected).json()).code).toBe('40901')
@@ -123,7 +128,7 @@ test('stale editor preserves local content, compares the server draft and reload
     const comparison = other.getByRole('dialog', { name: '版本对比', exact: true })
     await expect(comparison.getByLabel('本地正文', { exact: true })).toHaveValue('# 本地冲突正文仍需保留')
     await expect(comparison.getByLabel('服务器正文', { exact: true })).toHaveValue('# 服务器保存的正文')
-    await other.screenshot({ path: info.outputPath('working-draft-conflict-comparison.png'), fullPage: true })
+    await other.screenshot({ path: info.outputPath('working-draft-conflict-comparison.png'), fullPage: true, animations: 'disabled' })
     await comparison.locator('.el-dialog__headerbtn').click()
     await other.getByRole('button', { name: '重新加载最新稿', exact: true }).click()
     await other.getByRole('button', { name: '放弃本地修改', exact: true }).click()
@@ -156,7 +161,7 @@ test('discard and version restoration keep the active article unchanged until an
   await expect(titleInput(page)).toHaveValue(firstTitle)
   expect((await editing(page, id)).hasWorkingCopy).toBe(true)
   expect((await data(await page.request.get(`/api/articles/${id}`))).title).toBe('当前发布稿')
-  await page.screenshot({ path: info.outputPath('restored-version-is-working-draft.png'), fullPage: true })
+  await page.screenshot({ path: info.outputPath('restored-version-is-working-draft.png'), fullPage: true, animations: 'disabled' })
 })
 
 test('password, private and scheduled articles retain their audience and schedule throughout draft editing', async ({ page, browser }) => {

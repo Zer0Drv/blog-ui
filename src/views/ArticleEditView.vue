@@ -742,8 +742,13 @@ onMounted(async () => {
 
 <style scoped>
 .editor-page {
+  width: 100%;
   max-width: 960px;
+  min-width: 0;
   margin: 0 auto;
+}
+.editor-page :deep(.el-form-item__content) {
+  min-width: 0;
 }
 .row {
   display: flex;
@@ -751,14 +756,15 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 .row-item {
-  flex: 1;
-  min-width: 220px;
+  flex: 1 1 220px;
+  min-width: 0;
 }
 .full-width {
   width: 100%;
 }
 .cover-box {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
 }
@@ -776,6 +782,7 @@ onMounted(async () => {
 }
 .editor-wrap {
   width: 100%;
+  min-width: 0;
 }
 .actions {
   display: flex;
@@ -783,6 +790,9 @@ onMounted(async () => {
   justify-content: flex-end;
   align-items: center;
   gap: 12px;
+}
+.actions :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 .autosave-tip {
   margin-right: auto;
@@ -802,5 +812,14 @@ onMounted(async () => {
 .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .comparison-grid textarea { width: 100%; min-height: 350px; resize: vertical; box-sizing: border-box; }
 .rich-preview { overflow-wrap: anywhere; }
-@media (max-width: 600px) { .comparison-grid { grid-template-columns: 1fr; } .cover-box { flex-wrap: wrap; } }
+@media (max-width: 600px) {
+  .comparison-grid { grid-template-columns: 1fr; }
+  .row-item { flex-basis: 100%; }
+  .actions { justify-content: flex-start; }
+  .autosave-tip { flex-basis: 100%; }
+  .lock-tip { margin-left: 0; width: 100%; }
+  .editor-page :deep(.el-radio-group) { gap: 4px 12px; }
+  .editor-page :deep(.el-radio) { margin-right: 0; max-width: 100%; }
+  .editor-page :deep(.el-radio__label) { white-space: normal; }
+}
 </style>

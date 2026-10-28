@@ -63,7 +63,7 @@
         <el-button v-else type="primary" plain @click="router.push('/login')">登录</el-button>
       </div>
     </header>
-    <main class="content">
+    <main class="content" :class="{ 'editor-content': route.name === 'editor-edit' || route.name === 'editor-new' }">
       <router-view :key="route.name === 'editor-edit' || route.name === 'editor-new' ? route.path : undefined" />
     </main>
     <!-- P0 页脚：站点描述 / ICP / RSS / Atom -->
@@ -268,6 +268,10 @@ async function onCommand(cmd) {
   max-width: 1100px;
   margin: 0 auto;
   padding: 20px 16px 40px;
+}
+.content.editor-content {
+  width: 100%;
+  box-sizing: border-box;
 }
 /* P0 顶部搜索框：窄屏隐藏 */
 .search-input {
