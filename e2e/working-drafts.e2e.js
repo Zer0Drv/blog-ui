@@ -50,7 +50,7 @@ test('published edits survive refresh and a new login while readers keep the act
   const originalTitle = `生效原稿 ${marker}`
   const changedTitle = `独立修改稿 ${marker}`
   const content = `# 独立修改稿\n\n尚未发布的修改 ${marker}`
-  const id = await create(page, originalTitle)
+  const id = await create(page, originalTitle, { slug: `working-draft-${marker}` })
   const original = await data(await page.request.get(`/api/articles/${id}`))
   const anonymous = await browser.newContext({ baseURL: origin })
   const relogged = await browser.newContext({ baseURL: origin })
