@@ -5,3 +5,8 @@ allowBuilds:
 # 本次安全修复采用新发布的 Mermaid，仅允许该具体版本提前安装。
 minimumReleaseAgeExclude:
   - mermaid@12.2.0
+
+# GHSA-g3hv-75wg-m249：上游支持修复版本后移除这些覆盖。
+overrides:
+  glob>minimatch: 11.0.1
+  editorconfig>minimatch: 11.0.1
