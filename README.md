@@ -3,6 +3,8 @@
 [![CI](https://github.com/Zer0Drv/blog-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/Zer0Drv/blog-ui/actions/workflows/ci.yml)
 [![CD](https://github.com/Zer0Drv/blog-ui/actions/workflows/cd.yml/badge.svg)](https://github.com/Zer0Drv/blog-ui/actions/workflows/cd.yml)
 
+[前端 Wiki](https://github.com/Zer0Drv/blog-ui/wiki)
+
 基于 Vue 3 + Vite 的博客前台 + 管理后台单页应用，配套后端 [`Zer0Drv/blog`](https://github.com/Zer0Drv/blog)
 （Spring Boot，需求基线见其 `docs/requirements-v1.md`）。
 
