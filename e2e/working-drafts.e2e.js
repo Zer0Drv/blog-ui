@@ -141,10 +141,13 @@ test('stale editor preserves local content, compares the server draft and reload
 test('discard and version restoration keep the active article unchanged until another explicit publish', async ({ page }, info) => {
   const fixture = await login(page)
   const firstTitle = `历史原稿 ${fixture.runId.slice(0, 10)}`
-  const id = await create(page, firstTitle)
+  await page.setViewportSize({ width: 1440, height: 1080 })
+  const firstContent = '# 历史正文\n\n```js\nconsole.log("历史正文")\n```'
+  const activeContent = '# 当前发布正文\n\n```js\nconsole.log("当前发布正文")\n```'
+  const id = await create(page, firstTitle, { content: firstContent })
   const base = await editing(page, id)
   await data(await page.request.post(`/api/articles/${id}/publish`, { headers, data: {
-    title: '当前发布稿', content: '# 当前发布正文', editorType: 'MARKDOWN', status: 'PUBLISHED', editRevision: base.editRevision
+    title: '当前发布稿', content: activeContent, editorType: 'MARKDOWN', status: 'PUBLISHED', editRevision: base.editRevision
   } }))
   await page.goto(`/editor/${id}`)
   await editAndWait(page, id, '待放弃的修改', '# 不应成为发布稿')
@@ -152,10 +155,22 @@ test('discard and version restoration keep the active article unchanged until an
   await page.getByRole('button', { name: '确认放弃', exact: true }).click()
   await expect(titleInput(page)).toHaveValue('当前发布稿')
   expect((await editing(page, id)).hasWorkingCopy).toBe(false)
-  expect((await data(await page.request.get(`/api/articles/${id}`))).content).toBe('# 当前发布正文')
+  expect((await data(await page.request.get(`/api/articles/${id}`))).content).toBe(activeContent)
+  const editorCodeHead = page.locator('.editor-wrap .md-editor-code-head')
+  await expect(editorCodeHead).toBeVisible()
   await page.getByRole('button', { name: '历史版本', exact: true }).click()
   const history = page.getByRole('dialog', { name: '历史版本', exact: true })
   const version = history.getByRole('row').filter({ hasText: firstTitle })
+  await version.getByRole('button', { name: '查看', exact: true }).click()
+  const versionPreview = page.getByRole('dialog', { name: /版本 v\d+ 预览/ })
+  await expect(versionPreview.locator('.md-editor-code-head')).toBeVisible()
+  await expect(versionPreview.locator('pre')).toContainText('历史正文')
+  await expect.poll(() => editorCodeHead.evaluate(head => {
+    const { x, y, width, height } = head.getBoundingClientRect()
+    const top = document.elementFromPoint(x + width / 2, y + height / 2)
+    return Boolean(top?.closest('.el-overlay')) && !head.contains(top)
+  })).toBe(true)
+  await versionPreview.locator('.el-dialog__headerbtn').click()
   await version.getByRole('button', { name: '恢复', exact: true }).click()
   await page.getByRole('dialog', { name: '恢复版本', exact: true }).getByRole('button', { name: '恢复', exact: true }).click()
   await expect(titleInput(page)).toHaveValue(firstTitle)

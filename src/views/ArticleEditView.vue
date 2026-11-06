@@ -784,6 +784,10 @@ onMounted(async () => {
   width: 100%;
   min-width: 0;
 }
+/* Keep the Markdown theme's sticky code controls below editor dialogs. */
+.editor-wrap :deep(.md-editor-preview-wrapper) {
+  isolation: isolate;
+}
 .actions {
   display: flex;
   flex-wrap: wrap;
