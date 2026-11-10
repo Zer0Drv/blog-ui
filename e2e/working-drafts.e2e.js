@@ -147,7 +147,10 @@ test('discard and version restoration keep the active article unchanged until an
   const id = await create(page, firstTitle, { content: firstContent })
   const base = await editing(page, id)
   await data(await page.request.post(`/api/articles/${id}/publish`, { headers, data: {
-    title: '当前发布稿', content: activeContent, editorType: 'MARKDOWN', status: 'PUBLISHED', editRevision: base.editRevision
+    title: '中间发布稿', content: '# 中间版本', editorType: 'MARKDOWN', status: 'PUBLISHED', editRevision: base.editRevision
+  } }))
+  await data(await page.request.post(`/api/articles/${id}/publish`, { headers, data: {
+    title: '当前发布稿', content: activeContent, editorType: 'MARKDOWN', status: 'PUBLISHED', editRevision: (await editing(page, id)).editRevision
   } }))
   await page.goto(`/editor/${id}`)
   await editAndWait(page, id, '待放弃的修改', '# 不应成为发布稿')
@@ -161,15 +164,21 @@ test('discard and version restoration keep the active article unchanged until an
   await page.getByRole('button', { name: '历史版本', exact: true }).click()
   const history = page.getByRole('dialog', { name: '历史版本', exact: true })
   const version = history.getByRole('row').filter({ hasText: firstTitle })
+  const versionNumber = async row => (await row.getByRole('cell').first().innerText()).replace(/^v/, '')
+  const baseVersion = await versionNumber(version)
+  await history.getByLabel('基准版本').selectOption(baseVersion)
   const revisionBeforeCompare = (await editing(page, id)).editRevision
   await history.getByRole('button', { name: '对比版本' }).click()
   const comparison = history.getByRole('region', { name: '版本差异' })
-  await expect(comparison.locator('del')).toContainText(firstTitle)
-  await expect(comparison.locator('ins')).toContainText('当前发布稿')
-  await expect(comparison.locator('.removed')).toContainText('# 历史正文')
-  await expect(comparison.locator('.added')).toContainText('# 当前发布正文')
+  await expect(comparison.locator('del').filter({ hasText: firstTitle })).toBeVisible()
+  await expect(comparison.locator('ins').filter({ hasText: '当前发布稿' })).toBeVisible()
+  await expect(comparison.locator('.removed').filter({ hasText: '# 历史正文' })).toBeVisible()
+  await expect(comparison.locator('.added').filter({ hasText: '# 当前发布正文' })).toBeVisible()
   expect((await editing(page, id)).editRevision).toBe(revisionBeforeCompare)
-  const baseVersion = await history.getByLabel('基准版本').inputValue()
+  const middleVersion = await versionNumber(history.getByRole('row').filter({ hasText: '中间发布稿' }))
+  await history.getByLabel('对比目标').selectOption(middleVersion)
+  await history.getByRole('button', { name: '对比版本' }).click()
+  await expect(comparison.locator('ins').filter({ hasText: '中间发布稿' })).toBeVisible()
   await history.getByLabel('对比目标').selectOption(baseVersion)
   await history.getByRole('button', { name: '对比版本' }).click()
   await expect(comparison).toContainText('可比较的内容一致')
