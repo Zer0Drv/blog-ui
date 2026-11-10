@@ -67,6 +67,7 @@
 
     <SubscriptionSettings />
     <TotpSettings />
+    <SessionDevices />
     <!-- 通知偏好卡片 -->
     <el-card class="settings-card">
       <template #header>
@@ -92,6 +93,7 @@ import { uploadImage, resolveUploadUrl } from '../api/upload'
 import { notifyProfileUpdated } from '../utils/profileSync'
 import SubscriptionSettings from '../components/SubscriptionSettings.vue'
 import TotpSettings from '../components/TotpSettings.vue'
+import SessionDevices from '../components/SessionDevices.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
