@@ -555,6 +555,8 @@ watch(() => [route.params.id, route.params.slug], () => {
   color-scheme: dark;
   --el-bg-color: #1c232d;
   --el-bg-color-overlay: #1c232d;
+  --el-fill-color-blank: #1c232d;
+  --el-fill-color: #293340;
   --el-fill-color-light: #293340;
   --el-border-color: #627183;
   --el-border-color-light: #526071;
@@ -567,4 +569,8 @@ watch(() => [route.params.id, route.params.slug], () => {
 .reading-dark .title, .reading-dark .toc-title { color: var(--el-text-color-primary); }
 .reading-dark .meta, .reading-dark .author, .reading-dark .toc-link { color: var(--el-text-color-regular); }
 .reading-dark .toc-link:hover { color: var(--el-color-primary); }
+.reading-dark .reading-body :deep(.md-editor-previewOnly) {
+  --md-bk-color: var(--el-bg-color);
+  --md-color: var(--el-text-color-primary);
+}
 </style>

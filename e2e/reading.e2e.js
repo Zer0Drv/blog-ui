@@ -51,7 +51,7 @@ test('reading preferences persist and position restoration is explicit and limit
   await page.goto(url(`reading-md-${marker}`))
   await expect(page.locator('.md-editor-preview pre').filter({ hasText: 'console.log(42)' }).first()).toBeVisible()
   await expect(page.locator('.reading-body .katex').first()).toBeVisible()
-  await expect(page.locator('.reading-body svg').last()).toBeVisible()
+  await expect(page.locator('.md-editor-mermaid svg[id]')).toBeVisible()
   await expect(page.locator('.reading-card')).toHaveClass(/reading-dark/)
   expect((await positions())[String(markdown)]).toBeUndefined()
   await page.screenshot({ path: info.outputPath('reading-dark-markdown-mobile.png'), fullPage: true })
