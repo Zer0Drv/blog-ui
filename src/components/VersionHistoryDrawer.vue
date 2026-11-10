@@ -3,6 +3,7 @@
     :model-value="visible"
     title="历史版本"
     size="min(680px, 100vw)"
+    style="max-width: 100%"
     @update:model-value="v => emit('update:visible', v)"
   >
     <form v-if="versions.length" class="compare-controls" @submit.prevent="compare">
