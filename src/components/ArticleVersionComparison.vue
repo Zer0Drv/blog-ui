@@ -17,11 +17,12 @@
       <p v-if="rich">富文本按消毒后的 HTML 结构显示。</p>
       <p v-if="body.coarse">正文较长，变化部分按区块显示。</p>
       <p>− 移除 · + 新增</p>
-      <div class="body-diff" tabindex="0" aria-label="可滚动的正文差异">
+      <details class="body-diff" open>
+        <summary>正文差异内容</summary>
         <pre v-for="(block, index) in body.blocks" :key="index" :class="block.kind"><span
           v-if="block.kind !== 'same'" class="sr-only"
         >{{ block.kind === 'removed' ? '移除：' : '新增：' }}</span>{{ block.lines.map(line => prefix[block.kind] + line).join('\n') }}</pre>
-      </div>
+      </details>
     </template>
   </section>
 </template>
@@ -57,6 +58,7 @@ const prefix = { removed: '− ', added: '+ ', same: '  ' }
 .fields dd { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin: 4px 0 12px; }
 .fields dd > * { padding: 4px 8px; white-space: pre-wrap; }
 .body-diff { max-height: 55vh; overflow: auto; border: 1px solid var(--el-border-color); }
+.body-diff summary { position: sticky; top: 0; padding: 4px 8px; background: var(--el-bg-color); cursor: pointer; }
 .body-diff pre { margin: 0; padding: 4px 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
 del, .removed { color: #8a1921; background: #fde8e9; }
 ins, .added { color: #12612e; background: #e3f6e9; }

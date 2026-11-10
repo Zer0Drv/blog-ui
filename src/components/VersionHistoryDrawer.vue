@@ -102,7 +102,7 @@ watch([() => props.articleId, () => props.visible], () => {
   previewRequest++
   versions.value = []
   previewVisible.value = false
-  if (props.visible) load()
+  if (props.visible) void load()
 }, { immediate: true, flush: 'sync' })
 
 // #9：历史快照同样可能包含恶意 HTML，预览前消毒
