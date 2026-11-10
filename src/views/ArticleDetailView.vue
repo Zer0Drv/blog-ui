@@ -60,21 +60,24 @@
           <details>
             <summary>阅读设置</summary>
             <div class="reading-options">
-              <label>主题
-                <select v-model="preferences.theme">
+              <div>
+                <label for="reading-theme">主题</label>
+                <select id="reading-theme" v-model="preferences.theme">
                   <option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option>
                 </select>
-              </label>
-              <label>字号
-                <select v-model="preferences.size">
+              </div>
+              <div>
+                <label for="reading-size">字号</label>
+                <select id="reading-size" v-model="preferences.size">
                   <option value="small">较小</option><option value="normal">标准</option><option value="large">较大</option>
                 </select>
-              </label>
-              <label>行距
-                <select v-model="preferences.spacing">
+              </div>
+              <div>
+                <label for="reading-spacing">行距</label>
+                <select id="reading-spacing" v-model="preferences.spacing">
                   <option value="normal">标准</option><option value="relaxed">宽松</option>
                 </select>
-              </label>
+              </div>
             </div>
           </details>
         </div>
@@ -533,7 +536,7 @@ watch(() => [route.params.id, route.params.slug], () => {
 .progress-label { display: inline-flex; align-items: center; gap: 6px; }
 .progress-label progress { width: 75px; accent-color: var(--el-color-primary); }
 .reading-options { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 0; }
-.reading-options label { display: grid; gap: 4px; }
+.reading-options > div { display: grid; gap: 4px; }
 .reading-options select { min-height: 32px; font: inherit; color: inherit; background: var(--el-bg-color); border: 1px solid var(--el-border-color); border-radius: 4px; }
 .reading-body { --reading-size: 1rem; --reading-spacing: 1.7; min-width: 0; overflow-wrap: anywhere; }
 .reading-body:focus-visible { outline: 2px solid var(--el-color-primary); outline-offset: 4px; }
