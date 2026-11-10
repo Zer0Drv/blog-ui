@@ -133,7 +133,7 @@ function confirm(device) {
   action.value = { device }
   outcome.value = ''
   open.value = true
-  loadSecurity()
+  void loadSecurity()
 }
 
 async function submit() {
