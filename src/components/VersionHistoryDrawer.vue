@@ -2,10 +2,26 @@
   <el-drawer
     :model-value="visible"
     title="历史版本"
-    size="520px"
+    size="min(680px, 100vw)"
+    style="max-width: 100%"
     @update:model-value="v => emit('update:visible', v)"
-    @open="load"
   >
+    <form v-if="versions.length" class="compare-controls" @submit.prevent="compare">
+      <label>基准版本
+        <select v-model="fromVersion">
+          <option v-for="version in versions" :key="version.version" :value="version.version">v{{ version.version }}</option>
+        </select>
+      </label>
+      <label>对比目标
+        <select v-model="toVersion">
+          <option value="saved">当前已保存稿</option>
+          <option v-for="version in versions" :key="version.version" :value="version.version">v{{ version.version }}</option>
+        </select>
+      </label>
+      <el-button native-type="submit" type="primary" :loading="comparing">对比版本</el-button>
+    </form>
+    <p v-if="compareFailed" role="alert">无法读取版本，请重试。</p>
+    <ArticleVersionComparison v-if="comparison" v-bind="comparison" />
     <el-table v-loading="loading" :data="versions" stripe>
       <el-table-column prop="version" label="版本" width="70">
         <template #default="{ row }">v{{ row.version }}</template>
@@ -29,7 +45,7 @@
     <el-dialog
       v-model="previewVisible"
       :title="`版本 v${preview?.version || ''} 预览`"
-      width="720px"
+      width="min(720px, calc(100vw - 32px))"
       append-to-body
     >
       <div v-loading="previewLoading" class="preview-body">
@@ -47,10 +63,11 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
-import { getArticleVersion, listArticleVersions } from '../api/article'
+import { computed, ref, watch } from 'vue'
+import { getArticleEditing, getArticleVersion, listArticleVersions } from '../api/article'
 import { sanitizeHtml } from '../utils/sanitize'
 import MdContentPreview from './MdContentPreview.vue'
+import ArticleVersionComparison from './ArticleVersionComparison.vue'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -65,28 +82,83 @@ const loading = ref(false)
 const previewVisible = ref(false)
 const previewLoading = ref(false)
 const preview = ref(null)
-const previewId = `version-preview-${props.articleId}`
+const previewId = computed(() => `version-preview-${props.articleId}`)
+const fromVersion = ref(null)
+const toVersion = ref('saved')
+const comparison = ref(null)
+const comparing = ref(false)
+const compareFailed = ref(false)
+let request = 0
+let listRequest = 0
+let previewRequest = 0
+
+watch([fromVersion, toVersion, () => props.articleId, () => props.visible], () => {
+  request++
+  comparison.value = null
+  comparing.value = false
+  compareFailed.value = false
+}, { flush: 'sync' })
+watch([() => props.articleId, () => props.visible], () => {
+  listRequest++
+  previewRequest++
+  versions.value = []
+  previewVisible.value = false
+  if (props.visible) void load()
+}, { immediate: true, flush: 'sync' })
 
 // #9：历史快照同样可能包含恶意 HTML，预览前消毒
 const sanitizedPreview = computed(() => sanitizeHtml(preview.value?.content || ''))
 
 async function load() {
+  const ticket = ++listRequest
   loading.value = true
+  fromVersion.value = null
+  toVersion.value = 'saved'
   try {
-    versions.value = await listArticleVersions(props.articleId) || []
+    const rows = await listArticleVersions(props.articleId) || []
+    if (ticket !== listRequest) return
+    versions.value = rows
+    fromVersion.value = rows[0]?.version ?? null
   } catch { /* 拦截器已提示 */ } finally {
-    loading.value = false
+    if (ticket === listRequest) loading.value = false
+  }
+}
+
+async function compare() {
+  if (comparing.value || fromVersion.value == null) return
+  const ticket = ++request
+  const id = props.articleId
+  const from = fromVersion.value
+  const to = toVersion.value
+  comparing.value = true
+  compareFailed.value = false
+  comparison.value = null
+  try {
+    const before = getArticleVersion(id, from)
+    const after = to === 'saved' ? getArticleEditing(id) : to === from ? before : getArticleVersion(id, to)
+    const [left, right] = await Promise.all([before, after])
+    if (ticket !== request) return
+    comparison.value = {
+      before: left, after: right, beforeLabel: `v${from}`,
+      afterLabel: to === 'saved' ? '当前已保存稿' : `v${to}`
+    }
+  } catch {
+    if (ticket === request) compareFailed.value = true
+  } finally {
+    if (ticket === request) comparing.value = false
   }
 }
 
 async function onPreview(row) {
+  const ticket = ++previewRequest
   previewVisible.value = true
   previewLoading.value = true
   preview.value = null
   try {
-    preview.value = await getArticleVersion(props.articleId, row.version)
+    const result = await getArticleVersion(props.articleId, row.version)
+    if (ticket === previewRequest) preview.value = result
   } catch { /* 拦截器已提示 */ } finally {
-    previewLoading.value = false
+    if (ticket === previewRequest) previewLoading.value = false
   }
 }
 
@@ -96,6 +168,10 @@ function formatTime(t) {
 </script>
 
 <style scoped>
+.compare-controls { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; margin-bottom: 16px; }
+.compare-controls label { display: grid; gap: 4px; }
+.compare-controls select { min-height: 32px; font: inherit; }
+.comparison { margin-bottom: 16px; }
 .preview-body {
   min-height: 200px;
 }

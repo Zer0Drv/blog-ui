@@ -561,7 +561,7 @@ async function restoreVersion(version) {
   if (!active || saving.value || conflicted.value) return
   const context = captureContext()
   try {
-    await ElMessageBox.confirm(`确认恢复到版本 v${version}？${isPublished.value ? '恢复内容将作为修改草稿，线上版本保持不变。' : '这会替换当前草稿内容。'}`,
+    await ElMessageBox.confirm(`确认恢复到版本 v${version}？这会替换当前编辑内容，包括未保存的修改。${isPublished.value ? '恢复内容将作为修改草稿，线上版本保持不变。' : ''}`,
       '恢复版本', { type: 'warning', confirmButtonText: '恢复', cancelButtonText: '取消' })
   } catch { return }
   if (!ownsContext(context)) return
