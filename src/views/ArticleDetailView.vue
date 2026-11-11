@@ -14,7 +14,7 @@
     <template v-else-if="article">
       <div class="content-wrap">
         <div class="main-col">
-          <el-card>
+          <el-card class="reading-card" :class="{ 'reading-dark': readingTheme === 'dark' }">
         <h1 class="title">{{ article.title }}</h1>
         <div class="meta">
           <span
@@ -50,15 +50,49 @@
         </div>
         <img v-if="article.cover" :src="resolveUploadUrl(article.cover)" class="cover" alt="cover" />
         <el-divider />
+        <div class="reading-tools">
+          <span>预计阅读 {{ minutes }} 分钟</span>
+          <label class="progress-label">
+            <span>阅读进度 {{ progress }}%</span>
+            <progress :value="progress" max="100" aria-label="阅读进度" />
+          </label>
+          <el-button v-if="resume !== null" size="small" @click="continueReading">继续上次阅读</el-button>
+          <details>
+            <summary>阅读设置</summary>
+            <div class="reading-options">
+              <div>
+                <label for="reading-theme">主题</label>
+                <select id="reading-theme" v-model="preferences.theme">
+                  <option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option>
+                </select>
+              </div>
+              <div>
+                <label for="reading-size">字号</label>
+                <select id="reading-size" v-model="preferences.size">
+                  <option value="small">较小</option><option value="normal">标准</option><option value="large">较大</option>
+                </select>
+              </div>
+              <div>
+                <label for="reading-spacing">行距</label>
+                <select id="reading-spacing" v-model="preferences.spacing">
+                  <option value="normal">标准</option><option value="relaxed">宽松</option>
+                </select>
+              </div>
+            </div>
+          </details>
+        </div>
+        <div ref="readingBody" class="reading-body" tabindex="-1" :class="[`reading-size-${preferences.size}`, `reading-spacing-${preferences.spacing}`]">
         <!-- 渲染前统一 DOMPurify 消毒（#9 存储型 XSS 防护，sanitize 收口于 MdContentPreview） -->
         <MdContentPreview
           v-if="article.editorType === 'MARKDOWN'"
           :content="article.content || ''"
           :editor-id="previewId"
+          :theme="readingTheme"
           @get-catalog="onGetCatalog"
         />
         <!-- RICHTEXT 模式渲染消毒后的 HTML（<script>/on* 事件等已被移除） -->
         <div v-else ref="richtextRef" class="richtext" v-html="sanitizedContent" />
+        </div>
 
         <!-- M3 互动栏：浏览量/点赞/收藏/评论数 -->
         <div v-if="!article.visibility || article.visibility === 'PUBLIC'" class="interaction-bar">
@@ -99,10 +133,10 @@
 
         <!-- P0 目录：宽屏（≥1100px）右侧 sticky，窄屏由 CSS order 收起到正文上方；无标题不渲染 -->
         <aside v-if="hasToc" class="toc-aside">
-          <div class="toc-box">
+          <div class="toc-box" :class="{ 'reading-dark': readingTheme === 'dark' }">
             <div class="toc-title">目录</div>
             <!-- MARKDOWN：MdCatalog 通过 editorId 与页内 MdContentPreview 联动，默认文档滚动 -->
-            <MdCatalog v-if="isMarkdown" :editor-id="previewId" :scroll-element-offset-top="70" />
+            <MdCatalog v-if="isMarkdown" :editor-id="previewId" :theme="readingTheme" :scroll-element-offset-top="70" />
             <!-- 富文本：渲染完成后从正文提取 h2/h3（≤20 条），点击平滑滚动 -->
             <ul v-else class="toc-list">
               <li
@@ -110,7 +144,7 @@
                 :key="item.id"
                 :class="`toc-lv-${item.level}`"
               >
-                <a class="toc-link" @click="scrollToHeading(item)">{{ item.text }}</a>
+                <a class="toc-link" :href="`#${item.id}`" @click.prevent="scrollToHeading(item)">{{ item.text }}</a>
               </li>
             </ul>
           </div>
@@ -134,6 +168,7 @@ import { resolveUploadUrl } from '../api/upload'
 import { sanitizeHtml } from '../utils/sanitize'
 import { useAuthStore } from '../stores/auth'
 import { useDocumentTitle } from '../composables/useDocumentTitle'
+import { readingMinutes, useArticleReading } from '../composables/useArticleReading'
 import { loadArticleMetadata } from '../utils/articleMetadata'
 import CommentSection from '../components/CommentSection.vue'
 import MdContentPreview from '../components/MdContentPreview.vue'
@@ -148,6 +183,9 @@ const auth = useAuthStore()
 const { setTitle } = useDocumentTitle()
 
 const article = ref(null)
+const readingBody = ref(null)
+const { preferences, theme: readingTheme, progress, resume, continueReading, updateLayout } =
+  useArticleReading(article, readingBody)
 const loading = ref(true)
 // slug 固定链接路由（Zer0Drv/blog#14）与 id 路由共用本组件：按路由参数分流取数
 const previewId = computed(() => `preview-${route.params.id || route.params.slug}`)
@@ -179,6 +217,14 @@ async function unlockArticle() {
 
 // #9：RICHTEXT 正文渲染前经 DOMPurify 消毒，杜绝 <img onerror> / <script> 等存储型 XSS
 const sanitizedContent = computed(() => sanitizeHtml(article.value?.content || ''))
+const minutes = computed(() => {
+  if (article.value?.editorType === 'MARKDOWN') {
+    return readingMinutes((article.value?.content || '').replace(/\[([^\[\]\r\n]*)\]\([^)\r\n]*\)/g, '$1'))
+  }
+  const template = document.createElement('template')
+  template.innerHTML = sanitizedContent.value
+  return readingMinutes(template.content.textContent || '')
+})
 
 const canManage = computed(() => {
   if (!auth.user || !article.value) return false
@@ -222,6 +268,7 @@ const hasToc = computed(() =>
 // MdContentPreview 渲染完成后吐出标题列表；为空则不渲染目录块
 function onGetCatalog(list) {
   mdCatalogList.value = list || []
+  updateLayout()
 }
 
 // 富文本目录：从正文容器提取 h2/h3，补 id（toc-0...）供锚点滚动，最多 20 条
@@ -240,8 +287,24 @@ function buildRichtextToc() {
 }
 
 function scrollToHeading(item) {
-  document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' })
+  richtextRef.value?.querySelector(`#${item.id}`)?.scrollIntoView({ behavior: 'smooth' })
 }
+
+let appliedAnchor = null
+watch([() => route.hash, article], () => { appliedAnchor = null }, { flush: 'sync' })
+watch([() => route.hash, readingBody, mdCatalogList, tocItems], async () => {
+  const hash = route.hash
+  if (!hash || appliedAnchor === hash || !readingBody.value) return
+  await nextTick()
+  if (hash !== route.hash || appliedAnchor === hash || !readingBody.value) return
+  let id
+  try { id = decodeURIComponent(hash.slice(1)) } catch { return }
+  const target = Array.from(readingBody.value.querySelectorAll('[id]')).find(node => node.id === id)
+  if (target) {
+    appliedAnchor = hash
+    target.scrollIntoView?.()
+  }
+})
 
 // M3 互动：点赞/收藏（匿名点击跳登录）
 const liking = ref(false)
@@ -467,5 +530,47 @@ watch(() => [route.params.id, route.params.slug], () => {
 }
 .richtext :deep(img) {
   max-width: 100%;
+}
+.reading-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 16px; font-size: .875rem; }
+.reading-tools summary { cursor: pointer; }
+.progress-label { display: inline-flex; align-items: center; gap: 6px; }
+.progress-label progress { width: 75px; accent-color: var(--el-color-primary); }
+.reading-options { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 0; }
+.reading-options > div { display: grid; gap: 4px; }
+.reading-options select { min-height: 32px; font: inherit; color: inherit; background: var(--el-bg-color); border: 1px solid var(--el-border-color); border-radius: 4px; }
+.reading-body { --reading-size: 1rem; --reading-spacing: 1.7; min-width: 0; overflow-wrap: anywhere; }
+.reading-body:focus-visible { outline: 2px solid var(--el-color-primary); outline-offset: 4px; }
+.reading-size-small { --reading-size: .9rem; }
+.reading-size-large { --reading-size: 1.2rem; }
+.reading-spacing-relaxed { --reading-spacing: 2; }
+.reading-body .richtext, .reading-body :deep(.md-editor-preview) { font-size: var(--reading-size); line-height: var(--reading-spacing); }
+.reading-body :deep(pre), .reading-body :deep(.katex-display) { max-width: 100%; overflow: auto; }
+.reading-body :deep(svg) { max-width: 100%; }
+.reading-body .richtext :deep(pre), .reading-body .richtext :deep(blockquote) { background: var(--el-fill-color-light); padding: 8px 12px; }
+.reading-body .richtext :deep(table) { max-width: 100%; border-collapse: collapse; }
+.reading-body .richtext :deep(td), .reading-body .richtext :deep(th) { border: 1px solid var(--el-border-color); padding: 4px 8px; }
+.reading-body .richtext :deep(th) { background: var(--el-fill-color-light); }
+.reading-body .richtext :deep(a) { color: var(--el-color-primary); }
+.reading-dark {
+  color-scheme: dark;
+  --el-bg-color: #1c232d;
+  --el-bg-color-overlay: #1c232d;
+  --el-fill-color-blank: #1c232d;
+  --el-fill-color: #293340;
+  --el-fill-color-light: #293340;
+  --el-border-color: #627183;
+  --el-border-color-light: #526071;
+  --el-text-color-primary: #f4f6f8;
+  --el-text-color-regular: #d3dce6;
+  --el-color-primary: #9fcdff;
+  background-color: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+}
+.reading-dark .title, .reading-dark .toc-title { color: var(--el-text-color-primary); }
+.reading-dark .meta, .reading-dark .author, .reading-dark .toc-link { color: var(--el-text-color-regular); }
+.reading-dark .toc-link:hover { color: var(--el-color-primary); }
+.reading-dark .reading-body :deep(.md-editor-previewOnly) {
+  --md-bk-color: var(--el-bg-color);
+  --md-color: var(--el-text-color-primary);
 }
 </style>

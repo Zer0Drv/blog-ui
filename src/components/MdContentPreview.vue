@@ -4,6 +4,7 @@
   <MdPreview
     :model-value="content"
     :editor-id="editorId"
+    :theme="theme"
     :sanitize="sanitizeHtml"
     @on-get-catalog="list => emit('get-catalog', list)"
   />
@@ -20,7 +21,8 @@ import { sanitizeHtml } from '../utils/sanitize'
 // get-catalog 透传给需要目录的调用方（无监听方时静默丢弃）。
 defineProps({
   content: { type: String, default: '' },
-  editorId: { type: String, default: undefined }
+  editorId: { type: String, default: undefined },
+  theme: { type: String, default: 'light' }
 })
 const emit = defineEmits(['get-catalog'])
 </script>
