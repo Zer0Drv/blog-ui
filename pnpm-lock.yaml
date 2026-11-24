@@ -52,8 +52,8 @@ importers:
         specifier: ^3.5.44
         version: 3.5.44
       vue-router:
-        specifier: ^5.4.0
-        version: 5.4.0(@vue/compiler-sfc@3.5.44)(pinia@4.1.0(@vue/devtools-api@8.2.1)(vue@3.5.44))(rolldown@1.2.16)(vite@8.3.6)(vue@3.5.44)
+        specifier: ^5.5.0
+        version: 5.5.0(@vue/compiler-sfc@3.5.44)(pinia@4.1.0(@vue/devtools-api@8.2.1)(vue@3.5.44))(rolldown@1.2.16)(vite@8.3.6)(vue@3.5.44)
     devDependencies:
       '@playwright/test':
         specifier: 1.65.0
@@ -2017,8 +2017,8 @@ packages:
   vue-component-type-helpers@3.3.11:
     resolution: {integrity: sha512-LwcxzeliO9fkQcpJG0PoX8X5kmAhKmH9wkpDLxNabwzkQ9Zeib2YVHwFV4pcWmMLfXVfjr/dSV+DaJ3cIPgSNA==}
 
-  vue-router@5.4.0:
-    resolution: {integrity: sha512-pFvcYcxinDHjZUlf7AzFBrT8r8Xqvv4uMHoJnjc+EqPawXQvHTkF8S4tfSmQLpriVHUGfkaKlI7Et0KRjTMTdw==}
+  vue-router@5.5.0:
+    resolution: {integrity: sha512-nYhG+YzLcrO5Z7KbH1H/xvBeBzhCWhQG0z5DYNLuaJULhavZBmEgoQ5xVHGxwe65c5hnJQHZpBxWdQhnOBzHmw==}
     peerDependencies:
       '@pinia/colada': '>=0.21.2'
       '@vue/compiler-sfc': ^3.5.34 || ^4.0.0
@@ -4172,7 +4172,7 @@ snapshots:
 
   vue-component-type-helpers@3.3.11: {}
 
-  vue-router@5.4.0(@vue/compiler-sfc@3.5.44)(pinia@4.1.0(@vue/devtools-api@8.2.1)(vue@3.5.44))(rolldown@1.2.16)(vite@8.3.6)(vue@3.5.44):
+  vue-router@5.5.0(@vue/compiler-sfc@3.5.44)(pinia@4.1.0(@vue/devtools-api@8.2.1)(vue@3.5.44))(rolldown@1.2.16)(vite@8.3.6)(vue@3.5.44):
     dependencies:
       '@vue-macros/common': 3.1.4(vue@3.5.44)
       '@vue/devtools-api': 8.2.1
