@@ -10,3 +10,5 @@ minimumReleaseAgeExclude:
 overrides:
   glob>minimatch: 11.0.1
   editorconfig>minimatch: 11.0.1
+  # GHSA-6jcc-5g8w-32mx：wangEditor 仍依赖 20.x，待上游支持安全版本后移除。
+  '@wangeditor/core>i18next': 27.1.3
