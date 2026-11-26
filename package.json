@@ -19,19 +19,19 @@
     "@wangeditor/editor-for-vue": "^5.1.12",
     "axios": "^1.21.1",
     "dompurify": "^3.4.17",
-    "element-plus": "^2.14.7",
+    "element-plus": "^2.14.8",
     "highlight.js": "^11.12.0",
     "katex": "^0.19.1",
     "md-editor-v3": "^7.1.0",
     "mermaid": "^12.3.0",
     "pinia": "^4.1.0",
     "qrcode": "1.5.4",
-    "vue": "^3.5.44",
-    "vue-router": "^5.4.0"
+    "vue": "^3.5.46",
+    "vue-router": "^5.5.0"
   },
   "devDependencies": {
     "@playwright/test": "1.65.0",
-    "@vitejs/plugin-vue": "^6.0.10",
+    "@vitejs/plugin-vue": "^6.0.11",
     "@vue/test-utils": "^2.5.1",
     "jsdom": "^31.0.0",
     "vite": "^8.3.6",
